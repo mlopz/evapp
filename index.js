@@ -88,8 +88,8 @@ function updateConnectorsState(newChargers) {
           power: connector.power || null,
         };
         sessions.push(sessionObj);
-        // Guardar en PostgreSQL
-        insertMonitoringRecord({
+        // Guardar en PostgreSQL SOLO si power >= 60
+        insertMonitoringRecordSafe({
           charger_name: chargerName,
           connector_type: connector.type,
           connector_id: connectorId,
@@ -102,8 +102,8 @@ function updateConnectorsState(newChargers) {
       // Si inicia una sesión, no modificar el acumulado
       if (!prev.sessionStart && newState === 'Charging') {
         prev.sessionStart = now;
-        // Insertar evento Charging en la base de datos
-        insertMonitoringRecord({
+        // Insertar evento Charging SOLO si power >= 60
+        insertMonitoringRecordSafe({
           charger_name: chargerName,
           connector_type: connector.type,
           connector_id: connectorId,
@@ -210,7 +210,7 @@ setInterval(() => {
       for (const connectorId in connectorsState[chargerName]) {
         const state = connectorsState[chargerName][connectorId];
         if (state.state === 'Charging' && state.sessionStart) {
-          insertMonitoringRecord({
+          insertMonitoringRecordSafe({
             charger_name: chargerName,
             connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId).type,
             connector_id: connectorId,
@@ -235,7 +235,7 @@ function closeAndOpenChargingSessionsOnStartup() {
       if (state.state === 'Charging') {
         // Si hay una sesión previa abierta, cerrarla
         if (state.sessionStart) {
-          insertMonitoringRecord({
+          insertMonitoringRecordSafe({
             charger_name: chargerName,
             connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId).type,
             connector_id: connectorId,
@@ -246,7 +246,7 @@ function closeAndOpenChargingSessionsOnStartup() {
         }
         // Abrir una nueva sesión Charging
         state.sessionStart = now;
-        insertMonitoringRecord({
+        insertMonitoringRecordSafe({
           charger_name: chargerName,
           connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId).type,
           connector_id: connectorId,
@@ -268,9 +268,10 @@ pollChargers();
 app.get('/api/chargers', (req, res) => {
   console.log('--- /api/chargers llamado ---');
   const allChargers = getChargersWithAccumulated();
+  // Filtrar conectores por power >= 60
   const chargersWithFilteredConnectors = allChargers.map(charger => ({
     ...charger,
-    connectors: (charger.connectors || []).filter(conn => conn.power >= 60)
+    connectors: (charger.connectors || []).filter(conn => parseFloat(conn.power) >= 60)
   }));
   const filteredChargers = chargersWithFilteredConnectors.filter(charger => charger.connectors.length > 0);
   // Log de depuración justo antes de enviar la respuesta
@@ -354,22 +355,24 @@ app.get('/api/sessions', async (req, res) => {
       for (const connectorIdKey in connectorsState[chargerNameKey]) {
         const state = connectorsState[chargerNameKey][connectorIdKey];
         if (state.state === 'Charging' && state.sessionStart) {
-          // Si ya existe una sesión activa igual, reemplazarla por la de memoria (más confiable)
+          // Buscar conector de forma segura
+          const chargerObj = getChargersWithAccumulated().find(c => c.name === chargerNameKey);
+          const connectorObj = chargerObj ? (chargerObj.connectors || []).find(conn => conn.connectorId === connectorIdKey) : null;
+          const connectorTypeSafe = connectorObj ? connectorObj.type : null;
           const idx = sessions.findIndex(s => s.chargerName === chargerNameKey && s.connectorId === connectorIdKey && !s.end);
           const sessionMem = {
             chargerName: chargerNameKey,
             connectorId: connectorIdKey,
-            connectorType: getChargersWithAccumulated().find(c => c.name === chargerNameKey).connectors.find(conn => conn.connectorId === connectorIdKey).type,
+            connectorType: connectorTypeSafe,
             start: state.sessionStart,
             end: null,
             durationMinutes: minutesBetween(state.sessionStart, getNow()),
-            power: null,
+            power: connectorObj ? connectorObj.power : null,
             status: 'Charging',
           };
           if (idx !== -1) {
             sessions[idx] = sessionMem;
           } else {
-            // Solo incluir si coincide con el filtro
             if (
               (!chargerName || chargerNameKey === chargerName) &&
               (!connectorId || connectorIdKey === connectorId)
@@ -411,6 +414,13 @@ app.post('/api/clear-db', async (req, res) => {
     res.status(500).json({ success: false, message: 'Error al limpiar la base de datos.', error: err.message });
   }
 });
+
+// --- Filtrar conectores lentos en inserciones ---
+function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp }) {
+  if (typeof power === 'string') power = parseFloat(power);
+  if (power < 60) return Promise.resolve(); // No guardar eventos de conectores lentos
+  return insertMonitoringRecord({ charger_name, connector_type, connector_id, power, status, timestamp });
+}
 
 app.listen(PORT, () => {
   console.log(`Servidor backend escuchando en puerto ${PORT}`);
