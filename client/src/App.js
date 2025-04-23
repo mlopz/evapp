@@ -16,7 +16,7 @@ function App() {
   const [error, setError] = useState(null);
   const [filterStatus, setFilterStatus] = useState(null);
   const [selectedCharger, setSelectedCharger] = useState(null);
-  const [selectedConnector, setSelectedConnector] = useState(null);
+  const [selectedConnectorId, setSelectedConnectorId] = useState(null);
 
   const fetchChargers = async () => {
     setLoading(true);
@@ -39,15 +39,14 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Esta función ahora recibe el cargador y conector seleccionados
-  const fetchSessions = async (chargerName, connectorType) => {
+  // Obtener sesiones filtradas por chargerName y connectorId
+  const fetchSessions = async (chargerName, connectorId) => {
     setLoading(true);
     try {
-      // Construir la URL con los parámetros de filtro
       let url = `${API_URL}/api/sessions`;
       const params = [];
       if (chargerName) params.push(`chargerName=${encodeURIComponent(chargerName)}`);
-      if (connectorType) params.push(`connectorType=${encodeURIComponent(connectorType)}`);
+      if (connectorId) params.push(`connectorId=${encodeURIComponent(connectorId)}`);
       if (params.length > 0) url += `?${params.join('&')}`;
       const res = await fetch(url);
       const data = await res.json();
@@ -62,12 +61,11 @@ function App() {
 
   // Cuando se selecciona un conector, obtener el historial real filtrado
   useEffect(() => {
-    if (selectedConnector && selectedCharger) {
-      fetchSessions(selectedCharger.name, selectedConnector.type);
+    if (selectedConnectorId && selectedCharger) {
+      fetchSessions(selectedCharger.name, selectedConnectorId);
     }
-  }, [selectedConnector, selectedCharger]);
+  }, [selectedConnectorId, selectedCharger]);
 
-  // Mostrar la estructura de una sesión en consola para debug
   useEffect(() => {
     if (sessions.length > 0) {
       console.log('Ejemplo de sesión:', sessions[0]);
@@ -84,11 +82,11 @@ function App() {
           <div className="min-h-screen bg-gray-100 p-4">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-2xl font-bold text-gray-800">EV Chargers Monitor</h1>
-              {(selectedCharger || selectedConnector) && (
+              {(selectedCharger || selectedConnectorId) && (
                 <button
                   className="px-4 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
                   onClick={() => {
-                    setSelectedConnector(null);
+                    setSelectedConnectorId(null);
                     setSelectedCharger(null);
                   }}
                 >Volver</button>
@@ -96,7 +94,7 @@ function App() {
             </div>
             {loading && <div className="text-center text-gray-500">Cargando...</div>}
             {error && <div className="text-center text-red-500">{error}</div>}
-            {!loading && !error && !selectedCharger && !selectedConnector && (
+            {!loading && !error && !selectedCharger && !selectedConnectorId && (
               <>
                 {/* Resumen de cargadores y conectores */}
                 <div className="flex items-center justify-center gap-4 mb-2 text-gray-700">
@@ -126,19 +124,19 @@ function App() {
               </>
             )}
             {/* Mostrar conectores de un cargador seleccionado */}
-            {!loading && !error && selectedCharger && !selectedConnector && (
+            {!loading && !error && selectedCharger && !selectedConnectorId && (
               <ChargerConnectorsView
                 charger={selectedCharger}
-                onSelectConnector={setSelectedConnector}
+                onSelectConnector={setSelectedConnectorId}
                 sessions={sessions}
               />
             )}
             {/* Mostrar sesiones de un conector seleccionado */}
-            {!loading && !error && selectedConnector && selectedCharger && (
+            {!loading && !error && selectedConnectorId && selectedCharger && (
               <SessionsList
                 sessions={sessions}
-                onBack={() => setSelectedConnector(null)}
-                connector={selectedConnector}
+                onBack={() => setSelectedConnectorId(null)}
+                connectorId={selectedConnectorId}
               />
             )}
           </div>

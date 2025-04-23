@@ -265,8 +265,8 @@ app.get('/api/chargers', (req, res) => {
 app.get('/api/sessions', async (req, res) => {
   console.log('--- /api/sessions request (agrupando sesiones) ---');
   try {
-    const { chargerName, connectorType } = req.query;
-    console.log('Parámetros recibidos:', { chargerName, connectorType });
+    const { chargerName, connectorType, connectorId } = req.query;
+    console.log('Parámetros recibidos:', { chargerName, connectorType, connectorId });
     const pool = require('./db');
     let query = 'SELECT * FROM charger_monitoring WHERE 1=1';
     const params = [];
@@ -278,6 +278,10 @@ app.get('/api/sessions', async (req, res) => {
       params.push(connectorType);
       query += ` AND connector_type = $${params.length}`;
     }
+    if (connectorId) {
+      params.push(connectorId);
+      query += ` AND connector_id = $${params.length}`;
+    }
     query += ' ORDER BY timestamp ASC';
     console.log('Consulta SQL:', query);
     console.log('Parámetros SQL:', params);
@@ -288,13 +292,15 @@ app.get('/api/sessions', async (req, res) => {
     let sessions = [];
     let currentSession = null;
     for (const row of rows) {
+      // Normalizar timestamp a número (milisegundos)
+      const timestampMs = row.timestamp ? new Date(row.timestamp).getTime() : null;
       if (row.status === 'Charging') {
         if (!currentSession) {
           currentSession = {
             chargerName: row.charger_name,
             connectorId: row.connector_id,
             connectorType: row.connector_type,
-            start: row.timestamp,
+            start: timestampMs,
             power: row.power,
             end: null,
             durationMinutes: null
@@ -302,7 +308,7 @@ app.get('/api/sessions', async (req, res) => {
         }
       } else if (row.status === 'SessionEnded') {
         if (currentSession) {
-          currentSession.end = row.timestamp;
+          currentSession.end = timestampMs;
           currentSession.durationMinutes = Math.round((currentSession.end - currentSession.start) / 60000);
           sessions.push(currentSession);
           currentSession = null;
@@ -314,8 +320,34 @@ app.get('/api/sessions', async (req, res) => {
       currentSession.durationMinutes = Math.round((Date.now() - currentSession.start) / 60000);
       sessions.push(currentSession);
     }
+    // Agregar sesión activa desde memoria si corresponde (por si no hay eventos en la base)
+    for (const chargerNameKey in connectorsState) {
+      for (const connectorIdKey in connectorsState[chargerNameKey]) {
+        const state = connectorsState[chargerNameKey][connectorIdKey];
+        if (state.state === 'Charging' && state.sessionStart) {
+          // Si ya existe una sesión activa igual, no la agregues
+          if (!sessions.some(s => s.chargerName === chargerNameKey && s.connectorId === connectorIdKey && s.end === null)) {
+            // Solo incluir si coincide con el filtro
+            if (
+              (!chargerName || chargerNameKey === chargerName) &&
+              (!connectorId || connectorIdKey === connectorId)
+            ) {
+              sessions.unshift({
+                chargerName: chargerNameKey,
+                connectorId: connectorIdKey,
+                connectorType: getChargersWithAccumulated().find(c => c.name === chargerNameKey).connectors.find(conn => conn.connectorId === connectorIdKey).type,
+                start: state.sessionStart,
+                end: null,
+                durationMinutes: minutesBetween(state.sessionStart, getNow()),
+              });
+            }
+          }
+        }
+      }
+    }
     sessions.sort((a, b) => b.start - a.start);
-    console.log('Sesiones agrupadas a devolver:', sessions.length);
+    // Log de depuración de lo que se devuelve
+    console.log('Sesiones agrupadas a devolver:', JSON.stringify(sessions, null, 2));
     res.json({ sessions });
   } catch (err) {
     console.error('Error al obtener sesiones agrupadas:', err);

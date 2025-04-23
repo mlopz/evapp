@@ -6,9 +6,14 @@ function formatDate(ts) {
   return date.toLocaleString('es-AR', { hour12: false });
 }
 
-function SessionsList({ sessions, onBack, connector }) {
+function SessionsList({ sessions, onBack, connectorId }) {
   // Log de depuración para ver las sesiones recibidas
-  console.log('Sesiones a mostrar:', sessions);
+  console.log('Sesiones a mostrar:', sessions, 'para connectorId:', connectorId);
+
+  // Filtrar sesiones por connectorId
+  const filteredSessions = connectorId
+    ? sessions.filter(s => s.connectorId === connectorId)
+    : sessions;
 
   return (
     <div className="max-w-xl mx-auto">
@@ -21,11 +26,11 @@ function SessionsList({ sessions, onBack, connector }) {
         )}
         <h2 className="text-xl font-bold">Historial de sesiones</h2>
       </div>
-      {sessions.length === 0 ? (
+      {filteredSessions.length === 0 ? (
         <div className="text-gray-600">No hay sesiones para este conector.</div>
       ) : (
         <ul className="space-y-4">
-          {sessions.map((s, i) => (
+          {filteredSessions.map((s, i) => (
             <li key={i} className="border rounded p-3 bg-white shadow">
               <div className="flex justify-between text-sm">
                 <span className="font-semibold">Inicio:</span>
@@ -42,6 +47,10 @@ function SessionsList({ sessions, onBack, connector }) {
               <div className="flex justify-between text-sm">
                 <span className="font-semibold">Energía:</span>
                 <span>{s.power ? s.power + ' kW' : '-'}</span>
+              </div>
+              <div className="flex justify-between text-xs text-gray-400">
+                <span>ID:</span>
+                <span>{s.connectorId}</span>
               </div>
             </li>
           ))}
