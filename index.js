@@ -176,6 +176,7 @@ app.get('/api/sessions', async (req, res) => {
   console.log('--- /api/sessions request (agrupando sesiones) ---');
   try {
     const { chargerName, connectorType } = req.query;
+    console.log('Parámetros recibidos:', { chargerName, connectorType });
     const pool = require('./db');
     let query = 'SELECT * FROM charger_monitoring WHERE 1=1';
     const params = [];
@@ -188,14 +189,16 @@ app.get('/api/sessions', async (req, res) => {
       query += ` AND connector_type = $${params.length}`;
     }
     query += ' ORDER BY timestamp ASC';
+    console.log('Consulta SQL:', query);
+    console.log('Parámetros SQL:', params);
     const { rows } = await pool.query(query, params);
+    console.log('Registros obtenidos de la base:', rows.length);
 
     // Agrupar eventos en sesiones
     let sessions = [];
     let currentSession = null;
     for (const row of rows) {
       if (row.status === 'Charging') {
-        // Inicia nueva sesión si no hay una activa
         if (!currentSession) {
           currentSession = {
             chargerName: row.charger_name,
@@ -207,7 +210,6 @@ app.get('/api/sessions', async (req, res) => {
           };
         }
       } else if (row.status === 'SessionEnded') {
-        // Finaliza sesión si hay una activa
         if (currentSession) {
           currentSession.end = row.timestamp;
           currentSession.durationMinutes = Math.round((currentSession.end - currentSession.start) / 60000);
@@ -216,14 +218,13 @@ app.get('/api/sessions', async (req, res) => {
         }
       }
     }
-    // Si hay una sesión activa sin finalizar
     if (currentSession) {
       currentSession.end = null;
       currentSession.durationMinutes = Math.round((Date.now() - currentSession.start) / 60000);
       sessions.push(currentSession);
     }
-    // Ordenar por inicio descendente
     sessions.sort((a, b) => b.start - a.start);
+    console.log('Sesiones agrupadas a devolver:', sessions.length);
     res.json({ sessions });
   } catch (err) {
     console.error('Error al obtener sesiones agrupadas:', err);
