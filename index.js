@@ -79,6 +79,14 @@ function updateConnectorsState(newChargers) {
         }
         if (!prev.sessionStart && newState === 'Charging') {
           prev.sessionStart = now;
+          // Insertar evento Charging en la base de datos
+          insertMonitoringRecord({
+            charger_name: chargerName,
+            connector_type: connectorType,
+            power: connector.power || null,
+            status: 'Charging',
+            timestamp: now
+          }).catch(err => console.error('Error guardando evento Charging en PostgreSQL:', err));
         }
         prev.lastState = prev.state;
         prev.state = newState;
@@ -149,6 +157,65 @@ async function pollChargers() {
     console.error('Error consultando la API pública:', err);
   }
 }
+
+// --- Cierre automático de sesiones por inactividad de la API ---
+setInterval(() => {
+  const now = Date.now();
+  // Si la última actualización fue hace más de 2 minutos
+  if (lastPollTimestamp && now - lastPollTimestamp > 2 * 60 * 1000) {
+    console.warn('[INACTIVIDAD API] Cerrando todas las sesiones de carga activas por falta de datos');
+    for (const chargerName in connectorsState) {
+      for (const connectorType in connectorsState[chargerName]) {
+        const state = connectorsState[chargerName][connectorType];
+        if (state.state === 'Charging' && state.sessionStart) {
+          insertMonitoringRecord({
+            charger_name: chargerName,
+            connector_type: connectorType,
+            power: null,
+            status: 'SessionEnded',
+            timestamp: now
+          }).catch(err => console.error('Error cerrando sesión por inactividad:', err));
+          state.sessionStart = null;
+          state.state = 'Available';
+        }
+      }
+    }
+  }
+}, 30 * 1000);
+
+// --- Al iniciar el backend: cerrar y abrir sesiones si corresponde ---
+function closeAndOpenChargingSessionsOnStartup() {
+  const now = Date.now();
+  for (const chargerName in connectorsState) {
+    for (const connectorType in connectorsState[chargerName]) {
+      const state = connectorsState[chargerName][connectorType];
+      if (state.state === 'Charging') {
+        // Si hay una sesión previa abierta, cerrarla
+        if (state.sessionStart) {
+          insertMonitoringRecord({
+            charger_name: chargerName,
+            connector_type: connectorType,
+            power: null,
+            status: 'SessionEnded',
+            timestamp: now
+          }).catch(err => console.error('Error cerrando sesión previa al iniciar backend:', err));
+        }
+        // Abrir una nueva sesión Charging
+        state.sessionStart = now;
+        insertMonitoringRecord({
+          charger_name: chargerName,
+          connector_type: connectorType,
+          power: null,
+          status: 'Charging',
+          timestamp: now
+        }).catch(err => console.error('Error abriendo nueva sesión Charging al iniciar backend:', err));
+      }
+    }
+  }
+}
+
+// Ejecutar al iniciar el backend
+setTimeout(closeAndOpenChargingSessionsOnStartup, 3000); // Espera 3 segundos por si hay inicialización previa
 
 setInterval(pollChargers, POLL_INTERVAL);
 pollChargers();
