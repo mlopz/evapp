@@ -67,13 +67,17 @@ function updateConnectorsState(newChargers) {
           lastUpdate: now,
           accumulatedMinutes: 0,
           sessionStart: null,
+          accumulatedMinutesDisplay: 0,
         };
       }
       const prev = connectorsState[chargerName][connectorId];
       const newState = connector.status;
+      // --- ACTUALIZACIÓN DE MINUTOS ACUMULADOS ---
+      // Si termina una sesión, sumar su duración al acumulado
       if (prev.state === 'Charging' && newState !== 'Charging' && prev.sessionStart) {
         const sessionEnd = now;
         const duration = minutesBetween(prev.sessionStart, sessionEnd);
+        prev.accumulatedMinutes = (prev.accumulatedMinutes || 0) + duration;
         const sessionObj = {
           chargerName,
           connectorId,
@@ -95,6 +99,7 @@ function updateConnectorsState(newChargers) {
         }).catch(err => console.error('Error guardando sesión en PostgreSQL:', err));
         prev.sessionStart = null;
       }
+      // Si inicia una sesión, no modificar el acumulado
       if (!prev.sessionStart && newState === 'Charging') {
         prev.sessionStart = now;
         // Insertar evento Charging en la base de datos
@@ -107,10 +112,27 @@ function updateConnectorsState(newChargers) {
           timestamp: now
         }).catch(err => console.error('Error guardando evento Charging en PostgreSQL:', err));
       }
+      // Si está en Charging, sumar el tiempo de la sesión en curso al acumulado para mostrar en tiempo real
+      if (prev.state === 'Charging' && prev.sessionStart) {
+        prev.accumulatedMinutesDisplay = (prev.accumulatedMinutes || 0) + minutesBetween(prev.sessionStart, now);
+      } else {
+        prev.accumulatedMinutesDisplay = prev.accumulatedMinutes || 0;
+      }
       prev.lastState = prev.state;
       prev.state = newState;
       prev.lastUpdate = now;
     });
+  }
+  logConnectorStates();
+}
+
+function logConnectorStates() {
+  console.log('--- Estado actual de connectorsState ---');
+  for (const chargerName in connectorsState) {
+    for (const connectorId in connectorsState[chargerName]) {
+      const state = connectorsState[chargerName][connectorId];
+      console.log(`Charger: ${chargerName} | ConnectorId: ${connectorId} | Estado: ${state.state} | sessionStart: ${state.sessionStart} | accumulatedMinutes: ${state.accumulatedMinutes}`);
+    }
   }
 }
 
@@ -122,7 +144,7 @@ function getChargersWithAccumulated() {
       const stateObj = connectorsState[chargerName]?.[connectorId] || {};
       return {
         ...connector,
-        accumulatedMinutes: stateObj.accumulatedMinutes || 0,
+        accumulatedMinutes: stateObj.accumulatedMinutesDisplay || 0,
         state: stateObj.state || connector.status,
       };
     });
@@ -267,6 +289,7 @@ app.get('/api/sessions', async (req, res) => {
   try {
     const { chargerName, connectorType, connectorId } = req.query;
     console.log('Parámetros recibidos:', { chargerName, connectorType, connectorId });
+    logConnectorStates();
     const pool = require('./db');
     let query = 'SELECT * FROM charger_monitoring WHERE 1=1';
     const params = [];
