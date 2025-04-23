@@ -288,67 +288,89 @@ app.get('/api/sessions', async (req, res) => {
     const { rows } = await pool.query(query, params);
     console.log('Registros obtenidos de la base:', rows.length);
 
-    // Agrupar eventos en sesiones
-    let sessions = [];
-    let currentSession = null;
+    // --- Agrupación robusta por connectorId ---
+    const sessionsByConnector = {};
     for (const row of rows) {
-      // Normalizar timestamp a número (milisegundos)
+      const cid = row.connector_id;
+      const charger = row.charger_name;
+      const ctype = row.connector_type;
       const timestampMs = row.timestamp ? new Date(row.timestamp).getTime() : null;
+      if (!sessionsByConnector[cid]) {
+        sessionsByConnector[cid] = {
+          chargerName: charger,
+          connectorId: cid,
+          connectorType: ctype,
+          start: null,
+          end: null,
+          power: null,
+          durationMinutes: null,
+          status: null,
+        };
+      }
       if (row.status === 'Charging') {
-        if (!currentSession) {
-          currentSession = {
-            chargerName: row.charger_name,
-            connectorId: row.connector_id,
-            connectorType: row.connector_type,
-            start: timestampMs,
-            power: row.power,
-            end: null,
-            durationMinutes: null
-          };
+        // Solo tomar el primer Charging como inicio de sesión
+        if (!sessionsByConnector[cid].start) {
+          sessionsByConnector[cid].start = timestampMs;
+          sessionsByConnector[cid].power = row.power;
+          sessionsByConnector[cid].status = 'Charging';
         }
       } else if (row.status === 'SessionEnded') {
-        if (currentSession) {
-          currentSession.end = timestampMs;
-          currentSession.durationMinutes = Math.round((currentSession.end - currentSession.start) / 60000);
-          sessions.push(currentSession);
-          currentSession = null;
+        // Si hay un inicio, cerrar la sesión
+        if (sessionsByConnector[cid].start && !sessionsByConnector[cid].end) {
+          sessionsByConnector[cid].end = timestampMs;
+          sessionsByConnector[cid].durationMinutes = Math.round((sessionsByConnector[cid].end - sessionsByConnector[cid].start) / 60000);
+          sessionsByConnector[cid].status = 'Ended';
         }
       }
     }
-    if (currentSession) {
-      currentSession.end = null;
-      currentSession.durationMinutes = Math.round((Date.now() - currentSession.start) / 60000);
-      sessions.push(currentSession);
-    }
-    // Agregar sesión activa desde memoria si corresponde (por si no hay eventos en la base)
+    // Construir array de sesiones válidas (solo sesiones con start)
+    let sessions = Object.values(sessionsByConnector).filter(s => s.start);
+
+    // --- Agregar la sesión activa desde memoria si corresponde y priorizarla ---
     for (const chargerNameKey in connectorsState) {
       for (const connectorIdKey in connectorsState[chargerNameKey]) {
         const state = connectorsState[chargerNameKey][connectorIdKey];
         if (state.state === 'Charging' && state.sessionStart) {
-          // Si ya existe una sesión activa igual, no la agregues
-          if (!sessions.some(s => s.chargerName === chargerNameKey && s.connectorId === connectorIdKey && s.end === null)) {
+          // Si ya existe una sesión activa igual, reemplazarla por la de memoria (más confiable)
+          const idx = sessions.findIndex(s => s.chargerName === chargerNameKey && s.connectorId === connectorIdKey && !s.end);
+          const sessionMem = {
+            chargerName: chargerNameKey,
+            connectorId: connectorIdKey,
+            connectorType: getChargersWithAccumulated().find(c => c.name === chargerNameKey).connectors.find(conn => conn.connectorId === connectorIdKey).type,
+            start: state.sessionStart,
+            end: null,
+            durationMinutes: minutesBetween(state.sessionStart, getNow()),
+            power: null,
+            status: 'Charging',
+          };
+          if (idx !== -1) {
+            sessions[idx] = sessionMem;
+          } else {
             // Solo incluir si coincide con el filtro
             if (
               (!chargerName || chargerNameKey === chargerName) &&
               (!connectorId || connectorIdKey === connectorId)
             ) {
-              sessions.unshift({
-                chargerName: chargerNameKey,
-                connectorId: connectorIdKey,
-                connectorType: getChargersWithAccumulated().find(c => c.name === chargerNameKey).connectors.find(conn => conn.connectorId === connectorIdKey).type,
-                start: state.sessionStart,
-                end: null,
-                durationMinutes: minutesBetween(state.sessionStart, getNow()),
-              });
+              sessions.unshift(sessionMem);
             }
           }
         }
       }
     }
-    sessions.sort((a, b) => b.start - a.start);
+    // --- Eliminar duplicados: solo una sesión activa por connectorId ---
+    const uniqueSessions = [];
+    const seenActive = new Set();
+    for (const s of sessions) {
+      if (!s.end) {
+        if (seenActive.has(s.connectorId)) continue;
+        seenActive.add(s.connectorId);
+      }
+      uniqueSessions.push(s);
+    }
+    uniqueSessions.sort((a, b) => b.start - a.start);
     // Log de depuración de lo que se devuelve
-    console.log('Sesiones agrupadas a devolver:', JSON.stringify(sessions, null, 2));
-    res.json({ sessions });
+    console.log('Sesiones agrupadas a devolver:', JSON.stringify(uniqueSessions, null, 2));
+    res.json({ sessions: uniqueSessions });
   } catch (err) {
     console.error('Error al obtener sesiones agrupadas:', err);
     res.status(500).json({ sessions: [], error: 'Error al obtener sesiones', details: err.message });
