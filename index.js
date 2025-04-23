@@ -173,14 +173,33 @@ app.get('/api/chargers', (req, res) => {
 });
 
 app.get('/api/sessions', async (req, res) => {
-  console.log('--- /api/sessions request ---');
+  console.log('--- /api/sessions request (PostgreSQL) ---');
   try {
     const { chargerName, connectorType } = req.query;
-    console.log('Query params:', { chargerName, connectorType });
-    const sessions = getSessions({ chargerName, connectorType });
+    const pool = require('./db');
+    let query = 'SELECT * FROM charger_monitoring WHERE 1=1';
+    const params = [];
+    if (chargerName) {
+      params.push(chargerName);
+      query += ` AND charger_name = $${params.length}`;
+    }
+    if (connectorType) {
+      params.push(connectorType);
+      query += ` AND connector_type = $${params.length}`;
+    }
+    query += ' ORDER BY timestamp DESC';
+    const { rows } = await pool.query(query, params);
+    // Formatear los resultados si es necesario para el frontend
+    const sessions = rows.map(row => ({
+      chargerName: row.charger_name,
+      connectorType: row.connector_type,
+      power: row.power,
+      status: row.status,
+      timestamp: row.timestamp
+    }));
     res.json({ sessions });
   } catch (err) {
-    console.error('Error al obtener sesiones:', err);
+    console.error('Error al obtener sesiones desde PostgreSQL:', err);
     res.status(500).json({ sessions: [], error: 'Error al obtener sesiones', details: err.message });
   }
 });
