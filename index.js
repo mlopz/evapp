@@ -18,8 +18,8 @@ const POLL_INTERVAL = 30 * 1000; // 30 segundos
 // --- Estructuras en memoria ---
 let chargersData = [];
 let lastPollTimestamp = null;
-let connectorsState = {}; // { chargerName: { connectorType: { state, lastState, lastUpdate, accumulatedMinutes, sessionStart } } }
-let sessions = []; // [{ chargerName, connectorType, start, end, durationMinutes }]
+let connectorsState = {}; // { chargerName: { connectorId: { state, lastState, lastUpdate, accumulatedMinutes, sessionStart } } }
+let sessions = []; // [{ chargerName, connectorId, start, end, durationMinutes }]
 
 function getNow() {
   return Date.now();
@@ -36,62 +36,80 @@ function isFastChargerSession(session) {
   return charger && charger.connectors && charger.connectors.some(conn => conn.power >= 60 && conn.type === session.connectorType);
 }
 
+function processChargersWithConnectorId(rawChargers) {
+  return rawChargers.map(charger => {
+    const chargerName = charger.name;
+    const connectors = (charger.cnns || []).map((connector, idx) => {
+      const connectorId = `${chargerName}-${connector.type}-${idx}`;
+      return {
+        ...connector,
+        connectorId,
+      };
+    });
+    return {
+      ...charger,
+      connectors,
+    };
+  });
+}
+
 function updateConnectorsState(newChargers) {
   const now = getNow();
   for (const charger of newChargers) {
     const chargerName = charger.name;
     if (!connectorsState[chargerName]) connectorsState[chargerName] = {};
-    (charger.cnns || []).forEach((connector, connectorIndex) => {
-      const connectorType = connector.type;
-      if (!connectorsState[chargerName][connectorIndex]) {
-        connectorsState[chargerName][connectorIndex] = {
+    (charger.connectors || []).forEach((connector, connectorIndex) => {
+      const connectorId = connector.connectorId || `${chargerName}-${connector.type}-${connectorIndex}`;
+      if (!connectorsState[chargerName][connectorId]) {
+        connectorsState[chargerName][connectorId] = {
           state: connector.status,
           lastState: connector.status,
           lastUpdate: now,
           accumulatedMinutes: 0,
           sessionStart: null,
         };
-      } else {
-        const prev = connectorsState[chargerName][connectorIndex];
-        const newState = connector.status;
-        if (prev.state === 'Charging' && newState !== 'Charging' && prev.sessionStart) {
-          const sessionEnd = now;
-          const duration = minutesBetween(prev.sessionStart, sessionEnd);
-          const sessionObj = {
-            chargerName,
-            connectorIndex,
-            connectorType,
-            start: prev.sessionStart,
-            end: sessionEnd,
-            durationMinutes: duration,
-            power: connector.power || null,
-          };
-          sessions.push(sessionObj);
-          // Guardar en PostgreSQL
-          insertMonitoringRecord({
-            charger_name: chargerName,
-            connector_type: connectorType,
-            power: connector.power || null,
-            status: 'SessionEnded',
-            timestamp: sessionEnd
-          }).catch(err => console.error('Error guardando sesión en PostgreSQL:', err));
-          prev.sessionStart = null;
-        }
-        if (!prev.sessionStart && newState === 'Charging') {
-          prev.sessionStart = now;
-          // Insertar evento Charging en la base de datos
-          insertMonitoringRecord({
-            charger_name: chargerName,
-            connector_type: connectorType,
-            power: connector.power || null,
-            status: 'Charging',
-            timestamp: now
-          }).catch(err => console.error('Error guardando evento Charging en PostgreSQL:', err));
-        }
-        prev.lastState = prev.state;
-        prev.state = newState;
-        prev.lastUpdate = now;
       }
+      const prev = connectorsState[chargerName][connectorId];
+      const newState = connector.status;
+      if (prev.state === 'Charging' && newState !== 'Charging' && prev.sessionStart) {
+        const sessionEnd = now;
+        const duration = minutesBetween(prev.sessionStart, sessionEnd);
+        const sessionObj = {
+          chargerName,
+          connectorId,
+          connectorType: connector.type,
+          start: prev.sessionStart,
+          end: sessionEnd,
+          durationMinutes: duration,
+          power: connector.power || null,
+        };
+        sessions.push(sessionObj);
+        // Guardar en PostgreSQL
+        insertMonitoringRecord({
+          charger_name: chargerName,
+          connector_type: connector.type,
+          connector_id: connectorId,
+          power: connector.power || null,
+          status: 'SessionEnded',
+          timestamp: sessionEnd
+        }).catch(err => console.error('Error guardando sesión en PostgreSQL:', err));
+        prev.sessionStart = null;
+      }
+      if (!prev.sessionStart && newState === 'Charging') {
+        prev.sessionStart = now;
+        // Insertar evento Charging en la base de datos
+        insertMonitoringRecord({
+          charger_name: chargerName,
+          connector_type: connector.type,
+          connector_id: connectorId,
+          power: connector.power || null,
+          status: 'Charging',
+          timestamp: now
+        }).catch(err => console.error('Error guardando evento Charging en PostgreSQL:', err));
+      }
+      prev.lastState = prev.state;
+      prev.state = newState;
+      prev.lastUpdate = now;
     });
   }
 }
@@ -99,9 +117,9 @@ function updateConnectorsState(newChargers) {
 function getChargersWithAccumulated() {
   return chargersData.map(charger => {
     const chargerName = charger.name;
-    const connectors = (charger.cnns || []).map(connector => {
-      const connectorType = connector.type;
-      const stateObj = connectorsState[chargerName]?.[connectorType] || {};
+    const connectors = (charger.connectors || []).map(connector => {
+      const connectorId = connector.connectorId;
+      const stateObj = connectorsState[chargerName]?.[connectorId] || {};
       return {
         ...connector,
         accumulatedMinutes: stateObj.accumulatedMinutes || 0,
@@ -118,12 +136,13 @@ function getChargersWithAccumulated() {
 function getSessions(filter = {}) {
   let allSessions = [...sessions];
   for (const chargerName in connectorsState) {
-    for (const connectorType in connectorsState[chargerName]) {
-      const state = connectorsState[chargerName][connectorType];
+    for (const connectorId in connectorsState[chargerName]) {
+      const state = connectorsState[chargerName][connectorId];
       if (state.state === 'Charging' && state.sessionStart) {
         allSessions.unshift({
           chargerName,
-          connectorType,
+          connectorId,
+          connectorType: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId).type,
           start: state.sessionStart,
           end: null,
           durationMinutes: minutesBetween(state.sessionStart, getNow()),
@@ -150,8 +169,9 @@ async function pollChargers() {
         console.error('Error al parsear JSON:', e);
       }
     }
-    chargersData = Array.isArray(data) ? data : [];
-    if (data) updateConnectorsState(chargersData);
+    // Procesar y guardar con connectorId
+    chargersData = Array.isArray(data) ? processChargersWithConnectorId(data) : [];
+    if (chargersData.length > 0) updateConnectorsState(chargersData);
     lastPollTimestamp = getNow();
   } catch (err) {
     console.error('Error consultando la API pública:', err);
@@ -165,12 +185,13 @@ setInterval(() => {
   if (lastPollTimestamp && now - lastPollTimestamp > 2 * 60 * 1000) {
     console.warn('[INACTIVIDAD API] Cerrando todas las sesiones de carga activas por falta de datos');
     for (const chargerName in connectorsState) {
-      for (const connectorType in connectorsState[chargerName]) {
-        const state = connectorsState[chargerName][connectorType];
+      for (const connectorId in connectorsState[chargerName]) {
+        const state = connectorsState[chargerName][connectorId];
         if (state.state === 'Charging' && state.sessionStart) {
           insertMonitoringRecord({
             charger_name: chargerName,
-            connector_type: connectorType,
+            connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId).type,
+            connector_id: connectorId,
             power: null,
             status: 'SessionEnded',
             timestamp: now
@@ -187,14 +208,15 @@ setInterval(() => {
 function closeAndOpenChargingSessionsOnStartup() {
   const now = Date.now();
   for (const chargerName in connectorsState) {
-    for (const connectorType in connectorsState[chargerName]) {
-      const state = connectorsState[chargerName][connectorType];
+    for (const connectorId in connectorsState[chargerName]) {
+      const state = connectorsState[chargerName][connectorId];
       if (state.state === 'Charging') {
         // Si hay una sesión previa abierta, cerrarla
         if (state.sessionStart) {
           insertMonitoringRecord({
             charger_name: chargerName,
-            connector_type: connectorType,
+            connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId).type,
+            connector_id: connectorId,
             power: null,
             status: 'SessionEnded',
             timestamp: now
@@ -204,7 +226,8 @@ function closeAndOpenChargingSessionsOnStartup() {
         state.sessionStart = now;
         insertMonitoringRecord({
           charger_name: chargerName,
-          connector_type: connectorType,
+          connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId).type,
+          connector_id: connectorId,
           power: null,
           status: 'Charging',
           timestamp: now
@@ -269,6 +292,7 @@ app.get('/api/sessions', async (req, res) => {
         if (!currentSession) {
           currentSession = {
             chargerName: row.charger_name,
+            connectorId: row.connector_id,
             connectorType: row.connector_type,
             start: row.timestamp,
             power: row.power,
@@ -296,6 +320,18 @@ app.get('/api/sessions', async (req, res) => {
   } catch (err) {
     console.error('Error al obtener sesiones agrupadas:', err);
     res.status(500).json({ sessions: [], error: 'Error al obtener sesiones', details: err.message });
+  }
+});
+
+// --- Endpoint para limpiar la base de datos (tabla charger_monitoring) ---
+app.post('/api/clear-db', async (req, res) => {
+  try {
+    const pool = require('./db');
+    await pool.query('DELETE FROM charger_monitoring');
+    res.json({ success: true, message: 'Base de datos limpiada correctamente.' });
+  } catch (err) {
+    console.error('Error al limpiar la base de datos:', err);
+    res.status(500).json({ success: false, message: 'Error al limpiar la base de datos.', error: err.message });
   }
 });
 

@@ -11,8 +11,8 @@ export default function ChargerConnectorsView({ charger, onSelectConnector, sess
   console.log('Conectores mostrados:', charger.connectors);
 
   // Para cada conector, calcular cantidad de sesiones y minutos acumulados
-  function getConnectorStats(connectorIndex) {
-    const filtered = sessions.filter(s => s.chargerName === charger.name && s.connectorIndex === connectorIndex && s.start && s.end);
+  function getConnectorStats(connectorType) {
+    const filtered = sessions.filter(s => s.chargerName === charger.name && s.connectorType === connectorType && s.start && (s.end || s.end === null));
     const count = filtered.length;
     const minutes = filtered.reduce((sum, s) => {
       if (typeof s.durationMinutes === 'number') {
@@ -31,12 +31,12 @@ export default function ChargerConnectorsView({ charger, onSelectConnector, sess
       <h2 className="text-xl font-bold mb-4 text-center">{charger.name}</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {charger.connectors.map((conn, idx) => {
-          const stats = getConnectorStats(idx);
+          const stats = getConnectorStats(conn.type);
           return (
             <button
-              key={idx}
-              onClick={() => onSelectConnector({ ...conn, connectorIndex: idx })}
-              className={`border rounded-lg p-4 flex flex-col items-center gap-2 shadow-sm hover:shadow-md transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-300 ${stateColors[conn.state]}`}
+              key={conn.type}
+              onClick={() => onSelectConnector(conn)}
+              className={`border rounded-lg p-4 flex flex-col gap-2 shadow hover:bg-gray-50 ${stateColors[conn.state]}`}
               type="button"
             >
               <span className="text-lg font-semibold capitalize">{conn.type}</span>
