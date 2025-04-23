@@ -173,7 +173,7 @@ app.get('/api/chargers', (req, res) => {
 });
 
 app.get('/api/sessions', async (req, res) => {
-  console.log('--- /api/sessions request (PostgreSQL) ---');
+  console.log('--- /api/sessions request (agrupando sesiones) ---');
   try {
     const { chargerName, connectorType } = req.query;
     const pool = require('./db');
@@ -187,19 +187,46 @@ app.get('/api/sessions', async (req, res) => {
       params.push(connectorType);
       query += ` AND connector_type = $${params.length}`;
     }
-    query += ' ORDER BY timestamp DESC';
+    query += ' ORDER BY timestamp ASC';
     const { rows } = await pool.query(query, params);
-    // Formatear los resultados si es necesario para el frontend
-    const sessions = rows.map(row => ({
-      chargerName: row.charger_name,
-      connectorType: row.connector_type,
-      power: row.power,
-      status: row.status,
-      timestamp: row.timestamp
-    }));
+
+    // Agrupar eventos en sesiones
+    let sessions = [];
+    let currentSession = null;
+    for (const row of rows) {
+      if (row.status === 'Charging') {
+        // Inicia nueva sesión si no hay una activa
+        if (!currentSession) {
+          currentSession = {
+            chargerName: row.charger_name,
+            connectorType: row.connector_type,
+            start: row.timestamp,
+            power: row.power,
+            end: null,
+            durationMinutes: null
+          };
+        }
+      } else if (row.status === 'SessionEnded') {
+        // Finaliza sesión si hay una activa
+        if (currentSession) {
+          currentSession.end = row.timestamp;
+          currentSession.durationMinutes = Math.round((currentSession.end - currentSession.start) / 60000);
+          sessions.push(currentSession);
+          currentSession = null;
+        }
+      }
+    }
+    // Si hay una sesión activa sin finalizar
+    if (currentSession) {
+      currentSession.end = null;
+      currentSession.durationMinutes = Math.round((Date.now() - currentSession.start) / 60000);
+      sessions.push(currentSession);
+    }
+    // Ordenar por inicio descendente
+    sessions.sort((a, b) => b.start - a.start);
     res.json({ sessions });
   } catch (err) {
-    console.error('Error al obtener sesiones desde PostgreSQL:', err);
+    console.error('Error al obtener sesiones agrupadas:', err);
     res.status(500).json({ sessions: [], error: 'Error al obtener sesiones', details: err.message });
   }
 });
