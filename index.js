@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
+const { insertMonitoringRecord } = require('./monitoringRepository');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -26,19 +27,6 @@ function getNow() {
 
 function minutesBetween(ts1, ts2) {
   return Math.floor((ts2 - ts1) / 60000);
-}
-
-async function saveSessionToFirestore(session) {
-  if (!isFastChargerSession(session)) {
-    console.log('Sesión ignorada (cargador no rápido):', session);
-    return;
-  }
-  try {
-    await db.collection('sessions').add(session);
-    console.log('Sesión guardada en Firestore:', session);
-  } catch (error) {
-    console.error('Error guardando sesión en Firestore:', error);
-  }
 }
 
 function isFastChargerSession(session) {
@@ -76,9 +64,17 @@ function updateConnectorsState(newChargers) {
             start: prev.sessionStart,
             end: sessionEnd,
             durationMinutes: duration,
+            power: connector.power || null,
           };
           sessions.push(sessionObj);
-          saveSessionToFirestore(sessionObj); // Guardar en Firestore
+          // Guardar en PostgreSQL
+          insertMonitoringRecord({
+            charger_name: chargerName,
+            connector_type: connectorType,
+            power: connector.power || null,
+            status: 'SessionEnded',
+            timestamp: sessionEnd
+          }).catch(err => console.error('Error guardando sesión en PostgreSQL:', err));
           prev.sessionStart = null;
         }
         if (!prev.sessionStart && newState === 'Charging') {
@@ -181,46 +177,10 @@ app.get('/api/sessions', async (req, res) => {
   try {
     const { chargerName, connectorType } = req.query;
     console.log('Query params:', { chargerName, connectorType });
-    let query = db.collection('sessions');
-    console.log('Firestore base query creada');
-    if (chargerName) {
-      query = query.where('chargerName', '==', chargerName);
-      console.log('Filtro por chargerName:', chargerName);
-    }
-    if (connectorType) {
-      query = query.where('connectorType', '==', connectorType);
-      console.log('Filtro por connectorType:', connectorType);
-    }
-    const snapshot = await query.get();
-    console.log('Snapshot obtenido, cantidad de docs:', snapshot.size);
-    const sessions = [];
-    snapshot.docs.forEach(doc => {
-      const data = doc.data();
-      try {
-        let durationMinutes = 0;
-        if (
-          typeof data.durationMinutes === 'number' && data.durationMinutes > 0
-        ) {
-          durationMinutes = data.durationMinutes;
-        } else if (
-          typeof data.start === 'number' && typeof data.end === 'number' && data.end > data.start
-        ) {
-          durationMinutes = Math.floor((data.end - data.start) / 60000);
-        }
-        sessions.push({
-          ...data,
-          durationMinutes,
-        });
-      } catch (err) {
-        console.error('Error procesando sesión:', data, err);
-        // Puedes optar por ignorar la sesión problemática o incluirla con un flag
-        // sessions.push({ ...data, durationMinutes: 0, invalid: true });
-      }
-    });
-    console.log('Sessions mapeadas:', sessions.length);
+    const sessions = getSessions({ chargerName, connectorType });
     res.json({ sessions });
   } catch (err) {
-    console.error('Error al obtener sesiones desde Firestore:', err);
+    console.error('Error al obtener sesiones:', err);
     res.status(500).json({ sessions: [], error: 'Error al obtener sesiones', details: err.message });
   }
 });
