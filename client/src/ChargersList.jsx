@@ -17,6 +17,7 @@ function sumMinutesForCharger(sessions, chargerName) {
 
 function ChargersList({ chargers, onSelectCharger, sessions = [] }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortOrder, setSortOrder] = useState('desc'); // 'desc' o 'asc'
 
   // Ordenar cargadores por nombre
   const sortedChargers = [...chargers].sort((a, b) => a.name.localeCompare(b.name));
@@ -24,6 +25,21 @@ function ChargersList({ chargers, onSelectCharger, sessions = [] }) {
   // Filtrar por nombre según el searchTerm
   const filteredChargers = sortedChargers.filter(charger =>
     charger.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
+  );
+
+  // Calcular minutos acumulados y cantidad de sesiones por cargador
+  const chargersWithStats = filteredChargers.map((charger) => {
+    const totalMinutes = sumMinutesForCharger(sessions, charger.name);
+    // Contar sesiones de todos los conectores de este cargador
+    const sessionCount = sessions
+      ? sessions.filter(s => s.chargerName === charger.name).length
+      : 0;
+    return { ...charger, totalMinutes, sessionCount };
+  });
+
+  // Ordenar cargadores por minutos acumulados
+  const sortedChargersWithStats = [...chargersWithStats].sort((a, b) =>
+    sortOrder === 'desc' ? b.totalMinutes - a.totalMinutes : a.totalMinutes - b.totalMinutes
   );
 
   return (
@@ -37,11 +53,22 @@ function ChargersList({ chargers, onSelectCharger, sessions = [] }) {
           onChange={e => setSearchTerm(e.target.value)}
         />
       </div>
+      <div className="flex justify-end mb-2">
+        <label className="mr-2 text-gray-600">Ordenar por minutos:</label>
+        <select
+          className="border rounded px-2 py-1"
+          value={sortOrder}
+          onChange={e => setSortOrder(e.target.value)}
+        >
+          <option value="desc">Mayor a menor</option>
+          <option value="asc">Menor a mayor</option>
+        </select>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {filteredChargers.length === 0 ? (
+        {sortedChargersWithStats.length === 0 ? (
           <div className="col-span-full text-center text-gray-500">No se encontraron cargadores.</div>
         ) : (
-          filteredChargers.map((charger) => {
+          sortedChargersWithStats.map((charger) => {
             // Estado principal: Charging > Available > Unavailable
             let status = 'Unavailable';
             if (charger.connectors.some(c => c.state === 'Charging')) status = 'Charging';
@@ -50,8 +77,6 @@ function ChargersList({ chargers, onSelectCharger, sessions = [] }) {
             const maxPower = Math.max(...charger.connectors.map(c => c.power || 0));
             // Número de conectores
             const connectorCount = charger.connectors.length;
-            // Minutos acumulados
-            const totalMinutes = sumMinutesForCharger(sessions, charger.name);
             return (
               <button
                 key={charger.name}
@@ -74,7 +99,11 @@ function ChargersList({ chargers, onSelectCharger, sessions = [] }) {
                   </span>
                   <span title="Minutos acumulados" className="flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
-                    {totalMinutes} min
+                    {charger.totalMinutes} min
+                  </span>
+                  <span title="Cantidad de sesiones" className="flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+                    {charger.sessionCount}
                   </span>
                   <span title="Ubicación" className="flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
