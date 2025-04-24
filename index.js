@@ -519,11 +519,36 @@ app.post('/api/migrate-sessions', async (req, res) => {
   }
 });
 
-// --- Filtrar conectores lentos en inserciones ---
-function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp }) {
+// --- Filtrar conectores lentos en inserciones y guardar sesión en connector_sessions ---
+async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp }) {
   if (typeof power === 'string') power = parseFloat(power);
   if (power < 60) return Promise.resolve(); // No guardar eventos de conectores lentos
-  return insertMonitoringRecord({ charger_name, connector_type, connector_id, power, status, timestamp });
+  // Guardar en charger_monitoring como log histórico
+  await insertMonitoringRecord({ charger_name, connector_type, connector_id, power, status, timestamp });
+
+  // --- Nueva lógica: guardar o actualizar sesión en connector_sessions ---
+  if (status === 'Charging') {
+    // Insertar nueva sesión solo si no hay una activa para este conector
+    await pool.query(
+      `INSERT INTO connector_sessions (charger_name, connector_id, connector_type, power, session_start)
+       SELECT $1, $2, $3, $4, to_timestamp($5 / 1000.0)
+       WHERE NOT EXISTS (
+         SELECT 1 FROM connector_sessions WHERE charger_name = $1 AND connector_id = $2 AND session_end IS NULL
+       )`,
+      [charger_name, connector_id, connector_type, power, timestamp]
+    );
+  } else if (status === 'SessionEnded') {
+    // Actualizar la sesión activa (sin session_end) para este conector
+    const res = await pool.query(
+      `UPDATE connector_sessions
+       SET session_end = to_timestamp($1 / 1000.0),
+           duration_minutes = ROUND((to_timestamp($1 / 1000.0) - session_start) * 24 * 60)
+       WHERE charger_name = $2 AND connector_id = $3 AND session_end IS NULL
+       RETURNING *`,
+      [timestamp, charger_name, connector_id]
+    );
+    // Si no se actualizó ninguna fila, podrías loguear o manejar el caso
+  }
 }
 
 app.listen(PORT, () => {
