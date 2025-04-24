@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
 const { insertMonitoringRecord } = require('./monitoringRepository');
+const pool = require('./db'); // Agregado aquí para que esté disponible en todo el archivo
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -291,7 +292,6 @@ app.get('/api/sessions', async (req, res) => {
     const { chargerName, connectorType, connectorId } = req.query;
     console.log('Parámetros recibidos:', { chargerName, connectorType, connectorId });
     logConnectorStates();
-    const pool = require('./db');
     let query = 'SELECT * FROM charger_monitoring WHERE 1=1';
     const params = [];
     if (chargerName) {
@@ -406,7 +406,6 @@ app.get('/api/sessions', async (req, res) => {
 // --- Endpoint para limpiar la base de datos (tabla charger_monitoring) ---
 app.post('/api/clear-db', async (req, res) => {
   try {
-    const pool = require('./db');
     await pool.query('DELETE FROM charger_monitoring');
     res.json({ success: true, message: 'Base de datos limpiada correctamente.' });
   } catch (err) {
@@ -432,7 +431,6 @@ app.post('/api/create-sessions-table', async (req, res) => {
     );
   `;
   try {
-    const pool = require('./db');
     await pool.query(createTableSQL);
     res.json({ ok: true, message: 'Tabla connector_sessions creada (o ya existía).' });
   } catch (err) {
