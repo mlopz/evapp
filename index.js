@@ -536,6 +536,12 @@ app.post('/api/create-unique-index-sessions', async (req, res) => {
 // --- Filtrar conectores lentos en inserciones y guardar sesión en connector_sessions ---
 async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp }) {
   console.log('[insertMonitoringRecordSafe] llamado con:', { charger_name, connector_type, connector_id, power, status, timestamp });
+  console.log(`[insertMonitoringRecordSafe] charger_name: '${charger_name}'`);
+  console.log(`[insertMonitoringRecordSafe] connector_type: '${connector_type}'`);
+  console.log(`[insertMonitoringRecordSafe] connector_id: '${connector_id}'`);
+  console.log(`[insertMonitoringRecordSafe] power: '${power}'`);
+  console.log(`[insertMonitoringRecordSafe] status: '${status}'`);
+  console.log(`[insertMonitoringRecordSafe] timestamp: '${timestamp}'`);
   if (typeof power === 'string') power = parseFloat(power);
   if (power < 60) {
     console.log('[insertMonitoringRecordSafe] Potencia menor a 60, no se guarda.');
