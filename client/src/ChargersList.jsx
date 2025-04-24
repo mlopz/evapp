@@ -1,20 +1,6 @@
 import React, { useState } from 'react';
 import ConnectorItem from './ConnectorItem';
 
-function sumMinutesForCharger(sessions, chargerName) {
-  return sessions
-    .filter(s => s.chargerName === chargerName && s.start && s.end)
-    .reduce((sum, s) => {
-      if (typeof s.durationMinutes === 'number') {
-        return sum + s.durationMinutes;
-      }
-      if (s.start && s.end) {
-        return sum + Math.round((s.end - s.start) / 60000);
-      }
-      return sum;
-    }, 0);
-}
-
 function ChargersList({ chargers, onSelectCharger, sessions = [] }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('desc'); // 'desc' o 'asc'
@@ -27,9 +13,9 @@ function ChargersList({ chargers, onSelectCharger, sessions = [] }) {
     charger.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
   );
 
-  // Calcular minutos acumulados y cantidad de sesiones por cargador
+  // Calcular minutos acumulados por cargador usando el campo de conectores
   const chargersWithStats = filteredChargers.map((charger) => {
-    const totalMinutes = sumMinutesForCharger(sessions, charger.name);
+    const totalMinutes = (charger.connectors || []).reduce((sum, conn) => sum + (conn.accumulatedMinutes || 0), 0);
     // Contar sesiones de todos los conectores de este cargador
     const sessionCount = sessions
       ? sessions.filter(s => s.chargerName === charger.name).length

@@ -415,6 +415,31 @@ app.post('/api/clear-db', async (req, res) => {
   }
 });
 
+// --- Endpoint para crear la tabla connector_sessions ---
+app.post('/api/create-sessions-table', async (req, res) => {
+  const createTableSQL = `
+    CREATE TABLE IF NOT EXISTS connector_sessions (
+      id SERIAL PRIMARY KEY,
+      charger_name VARCHAR(100) NOT NULL,
+      connector_id VARCHAR(100) NOT NULL,
+      connector_type VARCHAR(50),
+      power INTEGER,
+      session_start TIMESTAMP NOT NULL,
+      session_end TIMESTAMP,
+      duration_minutes INTEGER,
+      energy_kwh REAL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `;
+  try {
+    const pool = require('./db');
+    await pool.query(createTableSQL);
+    res.json({ ok: true, message: 'Tabla connector_sessions creada (o ya existía).' });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // --- Filtrar conectores lentos en inserciones ---
 function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp }) {
   if (typeof power === 'string') power = parseFloat(power);

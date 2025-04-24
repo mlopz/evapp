@@ -32,10 +32,26 @@ function App() {
     }
   };
 
+  // Nuevo: fetch de todas las sesiones para el home
+  const fetchAllSessions = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/sessions`);
+      const data = await res.json();
+      setSessions(data.sessions || []);
+    } catch (err) {
+      // No interrumpe el loading general
+      console.error('Error al obtener todas las sesiones', err);
+    }
+  };
+
   useEffect(() => {
     let interval;
     fetchChargers();
-    interval = setInterval(fetchChargers, 30000);
+    fetchAllSessions();
+    interval = setInterval(() => {
+      fetchChargers();
+      fetchAllSessions();
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
