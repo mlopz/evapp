@@ -549,10 +549,9 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
     console.log(`[insertMonitoringRecordSafe] Intentando insertar nueva sesión en connector_sessions para ${charger_name} - ${connector_id}`);
     const result = await pool.query(
       `INSERT INTO connector_sessions (charger_name, connector_id, connector_type, power, session_start)
-       SELECT $1, $2, $3, $4, to_timestamp($5 / 1000.0)
-       WHERE NOT EXISTS (
-         SELECT 1 FROM connector_sessions WHERE charger_name = $1 AND connector_id = $2 AND session_end IS NULL
-       ) RETURNING *`,
+       VALUES ($1, $2, $3, $4, to_timestamp($5 / 1000.0))
+       ON CONFLICT ON CONSTRAINT unique_active_session DO NOTHING
+      `,
       [charger_name, connector_id, connector_type, power, timestamp]
     );
     console.log('[insertMonitoringRecordSafe] Resultado INSERT:', result.rows);
