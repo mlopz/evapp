@@ -456,25 +456,43 @@ app.post('/api/migrate-sessions', async (req, res) => {
       const key = `${event.charger_name}__${event.connector_id}`;
       if (!lastSession[key]) lastSession[key] = null;
 
+      // Convertir timestamp a ISO si es número
+      let eventTimestamp = event.timestamp;
+      if (typeof eventTimestamp === 'number') {
+        eventTimestamp = new Date(eventTimestamp).toISOString();
+      }
+
       if (event.status === 'Charging') {
         // Si no hay sesión abierta, abrir una nueva
         if (!lastSession[key]) {
+          let session_start = event.timestamp;
+          if (typeof session_start === 'number') {
+            session_start = new Date(session_start).toISOString();
+          }
           lastSession[key] = {
             charger_name: event.charger_name,
             connector_id: event.connector_id,
             connector_type: event.connector_type,
             power: event.power,
-            session_start: event.timestamp,
+            session_start,
           };
         }
         // Si ya hay sesión abierta, ignorar
       } else {
         // Si hay sesión abierta y termina la carga, registrar fin
         if (lastSession[key]) {
-          const session_end = event.timestamp;
-          const duration_minutes = Math.round((new Date(session_end) - new Date(lastSession[key].session_start)) / 60000);
+          let session_start = lastSession[key].session_start;
+          let session_end = event.timestamp;
+          if (typeof session_start === 'number') {
+            session_start = new Date(session_start).toISOString();
+          }
+          if (typeof session_end === 'number') {
+            session_end = new Date(session_end).toISOString();
+          }
+          const duration_minutes = Math.round((new Date(session_end) - new Date(session_start)) / 60000);
           sessionsToInsert.push({
             ...lastSession[key],
+            session_start,
             session_end,
             duration_minutes
           });
