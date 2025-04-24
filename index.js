@@ -553,14 +553,25 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
   // --- Nueva lógica: guardar o actualizar sesión en connector_sessions ---
   if (status === 'Charging') {
     console.log(`[insertMonitoringRecordSafe] Intentando insertar nueva sesión en connector_sessions para ${charger_name} - ${connector_id}`);
-    const result = await pool.query(
-      `INSERT INTO connector_sessions (charger_name, connector_id, connector_type, power, session_start)
-       VALUES ($1, $2, $3, $4, to_timestamp($5 / 1000.0))
-       ON CONFLICT ON CONSTRAINT unique_active_session DO NOTHING
-      `,
-      [charger_name, connector_id, connector_type, power, timestamp]
+    // Nueva lógica: SELECT previo y solo insertar si no existe sesión activa
+    const { rows: existing } = await pool.query(
+      `SELECT 1 FROM connector_sessions WHERE charger_name = $1 AND connector_id = $2 AND session_end IS NULL`,
+      [charger_name, connector_id]
     );
-    console.log('[insertMonitoringRecordSafe] Resultado INSERT:', result.rows);
+    if (existing.length === 0) {
+      try {
+        const result = await pool.query(
+          `INSERT INTO connector_sessions (charger_name, connector_id, connector_type, power, session_start)
+           VALUES ($1, $2, $3, $4, to_timestamp($5 / 1000.0)) RETURNING *`,
+          [charger_name, connector_id, connector_type, power, timestamp]
+        );
+        console.log('[insertMonitoringRecordSafe] INSERT exitoso:', result.rows);
+      } catch (err) {
+        console.error('[insertMonitoringRecordSafe] Error al insertar sesión:', err);
+      }
+    } else {
+      console.log('[insertMonitoringRecordSafe] Ya existe sesión activa, no se inserta.');
+    }
   } else if (status === 'SessionEnded') {
     console.log(`[insertMonitoringRecordSafe] Intentando cerrar sesión en connector_sessions para ${charger_name} - ${connector_id}`);
     const res = await pool.query(
