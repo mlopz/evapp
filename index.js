@@ -519,6 +519,20 @@ app.post('/api/migrate-sessions', async (req, res) => {
   }
 });
 
+// --- Endpoint temporal para crear índice único parcial en connector_sessions ---
+app.post('/api/create-unique-index-sessions', async (req, res) => {
+  try {
+    const sql = `CREATE UNIQUE INDEX IF NOT EXISTS unique_active_session
+      ON connector_sessions (charger_name, connector_id)
+      WHERE session_end IS NULL;`;
+    await pool.query(sql);
+    res.json({ ok: true, message: 'Índice único parcial creado correctamente.' });
+  } catch (err) {
+    console.error('Error creando índice único parcial:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // --- Filtrar conectores lentos en inserciones y guardar sesión en connector_sessions ---
 async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp }) {
   console.log('[insertMonitoringRecordSafe] llamado con:', { charger_name, connector_type, connector_id, power, status, timestamp });
