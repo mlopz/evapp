@@ -547,7 +547,7 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
     const res = await pool.query(
       `UPDATE connector_sessions
        SET session_end = to_timestamp($1 / 1000.0),
-           duration_minutes = ROUND((to_timestamp($1 / 1000.0) - session_start) * 24 * 60)
+           duration_minutes = ROUND(EXTRACT(EPOCH FROM (to_timestamp($1 / 1000.0) - session_start)) / 60)
        WHERE charger_name = $2 AND connector_id = $3 AND session_end IS NULL
        RETURNING *`,
       [timestamp, charger_name, connector_id]
