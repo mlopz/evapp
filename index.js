@@ -1,3 +1,5 @@
+console.log('--- Backend iniciado: index.js ---');
+
 require('dotenv').config();
 
 const express = require('express');
@@ -588,6 +590,60 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
     }
   }
 }
+
+// --- Nuevo endpoint para obtener resumen de sesiones por conector ---
+app.get('/api/connector-sessions/summary', async (req, res) => {
+  try {
+    // Traer todas las sesiones activas
+    const { rows: activeSessions } = await pool.query(`
+      SELECT * FROM connector_sessions WHERE session_end IS NULL
+    `);
+    // Traer la última sesión cerrada para cada conector
+    const { rows: lastSessions } = await pool.query(`
+      SELECT DISTINCT ON (charger_name, connector_id)
+        charger_name, connector_id, connector_type, power, session_start, session_end, duration_minutes
+      FROM connector_sessions
+      WHERE session_end IS NOT NULL
+      ORDER BY charger_name, connector_id, session_end DESC
+    `);
+    // Armar mapa para fácil acceso
+    const summary = {};
+    // Primero, poner sesiones activas
+    for (const s of activeSessions) {
+      summary[`${s.charger_name}|${s.connector_id}`] = {
+        charger_name: s.charger_name,
+        connector_id: s.connector_id,
+        connector_type: s.connector_type,
+        power: s.power,
+        active: true,
+        session_start: s.session_start,
+        session_end: null,
+        duration_minutes: null
+      };
+    }
+    // Luego, para los que no están activos, agregar la última sesión cerrada
+    for (const s of lastSessions) {
+      const key = `${s.charger_name}|${s.connector_id}`;
+      if (!summary[key]) {
+        summary[key] = {
+          charger_name: s.charger_name,
+          connector_id: s.connector_id,
+          connector_type: s.connector_type,
+          power: s.power,
+          active: false,
+          session_start: s.session_start,
+          session_end: s.session_end,
+          duration_minutes: s.duration_minutes
+        };
+      }
+    }
+    // Responder como array
+    res.json(Object.values(summary));
+  } catch (err) {
+    console.error('[connector-sessions/summary] Error:', err);
+    res.status(500).json({ error: 'Error obteniendo resumen de sesiones' });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Servidor backend escuchando en puerto ${PORT}`);
