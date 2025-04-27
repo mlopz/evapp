@@ -289,119 +289,39 @@ app.get('/api/chargers', (req, res) => {
 });
 
 app.get('/api/sessions', async (req, res) => {
-  console.log('--- /api/sessions request (agrupando sesiones) ---');
   try {
-    const { chargerName, connectorType, connectorId } = req.query;
-    console.log('Parámetros recibidos:', { chargerName, connectorType, connectorId });
-    logConnectorStates();
-    let query = 'SELECT * FROM charger_monitoring WHERE 1=1';
+    const { chargerName, connectorId } = req.query;
+    let query = 'SELECT * FROM connector_sessions WHERE 1=1';
     const params = [];
     if (chargerName) {
       params.push(chargerName);
       query += ` AND charger_name = $${params.length}`;
     }
-    if (connectorType) {
-      params.push(connectorType);
-      query += ` AND connector_type = $${params.length}`;
-    }
     if (connectorId) {
       params.push(connectorId);
       query += ` AND connector_id = $${params.length}`;
     }
-    query += ' ORDER BY timestamp ASC';
-    console.log('Consulta SQL:', query);
-    console.log('Parámetros SQL:', params);
+    query += ' ORDER BY charger_name, connector_id, session_start';
     const { rows } = await pool.query(query, params);
-    console.log('Registros obtenidos de la base:', rows.length);
-
-    // --- Agrupación robusta por connectorId ---
-    const sessionsByConnector = {};
-    for (const row of rows) {
-      const cid = row.connector_id;
-      const charger = row.charger_name;
-      const ctype = row.connector_type;
-      const timestampMs = row.timestamp ? new Date(row.timestamp).getTime() : null;
-      if (!sessionsByConnector[cid]) {
-        sessionsByConnector[cid] = {
-          chargerName: charger,
-          connectorId: cid,
-          connectorType: ctype,
-          start: null,
-          end: null,
-          power: null,
-          durationMinutes: null,
-          status: null,
-        };
-      }
-      if (row.status === 'Charging') {
-        // Solo tomar el primer Charging como inicio de sesión
-        if (!sessionsByConnector[cid].start) {
-          sessionsByConnector[cid].start = timestampMs;
-          sessionsByConnector[cid].power = row.power;
-          sessionsByConnector[cid].status = 'Charging';
-        }
-      } else if (row.status === 'SessionEnded') {
-        // Si hay un inicio, cerrar la sesión
-        if (sessionsByConnector[cid].start && !sessionsByConnector[cid].end) {
-          sessionsByConnector[cid].end = timestampMs;
-          sessionsByConnector[cid].durationMinutes = Math.round((sessionsByConnector[cid].end - sessionsByConnector[cid].start) / 60000);
-          sessionsByConnector[cid].status = 'Ended';
-        }
-      }
-    }
-    // Construir array de sesiones válidas (solo sesiones con start)
-    let sessions = Object.values(sessionsByConnector).filter(s => s.start);
-
-    // --- Agregar la sesión activa desde memoria si corresponde y priorizarla ---
-    for (const chargerNameKey in connectorsState) {
-      for (const connectorIdKey in connectorsState[chargerNameKey]) {
-        const state = connectorsState[chargerNameKey][connectorIdKey];
-        if (state.state === 'Charging' && state.sessionStart) {
-          // Buscar conector de forma segura
-          const chargerObj = getChargersWithAccumulated().find(c => c.name === chargerNameKey);
-          const connectorObj = chargerObj ? (chargerObj.connectors || []).find(conn => conn.connectorId === connectorIdKey) : null;
-          const connectorTypeSafe = connectorObj ? connectorObj.type : null;
-          const idx = sessions.findIndex(s => s.chargerName === chargerNameKey && s.connectorId === connectorIdKey && !s.end);
-          const sessionMem = {
-            chargerName: chargerNameKey,
-            connectorId: connectorIdKey,
-            connectorType: connectorTypeSafe,
-            start: state.sessionStart,
-            end: null,
-            durationMinutes: minutesBetween(state.sessionStart, getNow()),
-            power: connectorObj ? connectorObj.power : null,
-            status: 'Charging',
-          };
-          if (idx !== -1) {
-            sessions[idx] = sessionMem;
-          } else {
-            if (
-              (!chargerName || chargerNameKey === chargerName) &&
-              (!connectorId || connectorIdKey === connectorId)
-            ) {
-              sessions.unshift(sessionMem);
-            }
-          }
-        }
-      }
-    }
-    // --- Eliminar duplicados: solo una sesión activa por connectorId ---
-    const uniqueSessions = [];
-    const seenActive = new Set();
-    for (const s of sessions) {
-      if (!s.end) {
-        if (seenActive.has(s.connectorId)) continue;
-        seenActive.add(s.connectorId);
-      }
-      uniqueSessions.push(s);
-    }
-    uniqueSessions.sort((a, b) => b.start - a.start);
-    // Log de depuración de lo que se devuelve
-    console.log('Sesiones agrupadas a devolver:', JSON.stringify(uniqueSessions, null, 2));
-    res.json({ sessions: uniqueSessions });
+    res.json({ sessions: rows });
   } catch (err) {
-    console.error('Error al obtener sesiones agrupadas:', err);
+    console.error('[sessions] Error:', err);
     res.status(500).json({ sessions: [], error: 'Error al obtener sesiones', details: err.message });
+  }
+});
+
+app.get('/api/charger-monitoring/export', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM charger_monitoring ORDER BY charger_name, connector_id, timestamp');
+    if (!rows.length) return res.status(404).send('No hay datos para exportar');
+    const csvHeader = Object.keys(rows[0]).join(',') + '\n';
+    const csvRows = rows.map(r => Object.values(r).map(v => (v === null ? '' : `"${String(v).replace(/"/g, '""')}"`)).join(',')).join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="charger_monitoring.csv"');
+    res.send(csvHeader + csvRows);
+  } catch (err) {
+    console.error('[charger-monitoring/export] Error:', err);
+    res.status(500).json({ error: 'Error exportando eventos' });
   }
 });
 
@@ -535,62 +455,6 @@ app.post('/api/create-unique-index-sessions', async (req, res) => {
   }
 });
 
-// --- Filtrar conectores lentos en inserciones y guardar sesión en connector_sessions ---
-async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp }) {
-  console.log('[insertMonitoringRecordSafe] llamado con:', { charger_name, connector_type, connector_id, power, status, timestamp });
-  console.log(`[insertMonitoringRecordSafe] charger_name: '${charger_name}'`);
-  console.log(`[insertMonitoringRecordSafe] connector_type: '${connector_type}'`);
-  console.log(`[insertMonitoringRecordSafe] connector_id: '${connector_id}'`);
-  console.log(`[insertMonitoringRecordSafe] power: '${power}'`);
-  console.log(`[insertMonitoringRecordSafe] status: '${status}'`);
-  console.log(`[insertMonitoringRecordSafe] timestamp: '${timestamp}'`);
-  if (typeof power === 'string') power = parseFloat(power);
-  if (power < 60) {
-    console.log('[insertMonitoringRecordSafe] Potencia menor a 60, no se guarda.');
-    return Promise.resolve(); // No guardar eventos de conectores lentos
-  }
-  // Guardar en charger_monitoring como log histórico
-  await insertMonitoringRecord({ charger_name, connector_type, connector_id, power, status, timestamp });
-
-  // --- Nueva lógica: guardar o actualizar sesión en connector_sessions ---
-  if (status === 'Charging') {
-    console.log(`[insertMonitoringRecordSafe] Intentando insertar nueva sesión en connector_sessions para ${charger_name} - ${connector_id}`);
-    // Nueva lógica: SELECT previo y solo insertar si no existe sesión activa
-    const { rows: existing } = await pool.query(
-      `SELECT 1 FROM connector_sessions WHERE charger_name = $1 AND connector_id = $2 AND session_end IS NULL`,
-      [charger_name, connector_id]
-    );
-    if (existing.length === 0) {
-      try {
-        const result = await pool.query(
-          `INSERT INTO connector_sessions (charger_name, connector_id, connector_type, power, session_start)
-           VALUES ($1, $2, $3, $4, to_timestamp($5 / 1000.0)) RETURNING *`,
-          [charger_name, connector_id, connector_type, power, timestamp]
-        );
-        console.log('[insertMonitoringRecordSafe] INSERT exitoso:', result.rows);
-      } catch (err) {
-        console.error('[insertMonitoringRecordSafe] Error al insertar sesión:', err);
-      }
-    } else {
-      console.log('[insertMonitoringRecordSafe] Ya existe sesión activa, no se inserta.');
-    }
-  } else if (status === 'SessionEnded') {
-    console.log(`[insertMonitoringRecordSafe] Intentando cerrar sesión en connector_sessions para ${charger_name} - ${connector_id}`);
-    const res = await pool.query(
-      `UPDATE connector_sessions
-       SET session_end = to_timestamp($1 / 1000.0),
-           duration_minutes = ROUND(EXTRACT(EPOCH FROM (to_timestamp($1 / 1000.0) - session_start)) / 60)
-       WHERE charger_name = $2 AND connector_id = $3 AND session_end IS NULL
-       RETURNING *`,
-      [timestamp, charger_name, connector_id]
-    );
-    console.log('[insertMonitoringRecordSafe] Resultado UPDATE:', res.rows);
-    if (res.rowCount === 0) {
-      console.warn('[insertMonitoringRecordSafe] No se encontró sesión activa para cerrar.');
-    }
-  }
-}
-
 // --- Nuevo endpoint para obtener resumen de sesiones por conector ---
 app.get('/api/connector-sessions/summary', async (req, res) => {
   try {
@@ -688,6 +552,62 @@ app.get('/api/chargers/export', async (req, res) => {
     res.status(500).json({ error: 'Error exportando cargadores' });
   }
 });
+
+// --- Filtrar conectores lentos en inserciones y guardar sesión en connector_sessions ---
+async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp }) {
+  console.log('[insertMonitoringRecordSafe] llamado con:', { charger_name, connector_type, connector_id, power, status, timestamp });
+  console.log(`[insertMonitoringRecordSafe] charger_name: '${charger_name}'`);
+  console.log(`[insertMonitoringRecordSafe] connector_type: '${connector_type}'`);
+  console.log(`[insertMonitoringRecordSafe] connector_id: '${connector_id}'`);
+  console.log(`[insertMonitoringRecordSafe] power: '${power}'`);
+  console.log(`[insertMonitoringRecordSafe] status: '${status}'`);
+  console.log(`[insertMonitoringRecordSafe] timestamp: '${timestamp}'`);
+  if (typeof power === 'string') power = parseFloat(power);
+  if (power < 60) {
+    console.log('[insertMonitoringRecordSafe] Potencia menor a 60, no se guarda.');
+    return Promise.resolve(); // No guardar eventos de conectores lentos
+  }
+  // Guardar en charger_monitoring como log histórico
+  await insertMonitoringRecord({ charger_name, connector_type, connector_id, power, status, timestamp });
+
+  // --- Nueva lógica: guardar o actualizar sesión en connector_sessions ---
+  if (status === 'Charging') {
+    console.log(`[insertMonitoringRecordSafe] Intentando insertar nueva sesión en connector_sessions para ${charger_name} - ${connector_id}`);
+    // Nueva lógica: SELECT previo y solo insertar si no existe sesión activa
+    const { rows: existing } = await pool.query(
+      `SELECT 1 FROM connector_sessions WHERE charger_name = $1 AND connector_id = $2 AND session_end IS NULL`,
+      [charger_name, connector_id]
+    );
+    if (existing.length === 0) {
+      try {
+        const result = await pool.query(
+          `INSERT INTO connector_sessions (charger_name, connector_id, connector_type, power, session_start)
+           VALUES ($1, $2, $3, $4, to_timestamp($5 / 1000.0)) RETURNING *`,
+          [charger_name, connector_id, connector_type, power, timestamp]
+        );
+        console.log('[insertMonitoringRecordSafe] INSERT exitoso:', result.rows);
+      } catch (err) {
+        console.error('[insertMonitoringRecordSafe] Error al insertar sesión:', err);
+      }
+    } else {
+      console.log('[insertMonitoringRecordSafe] Ya existe sesión activa, no se inserta.');
+    }
+  } else if (status === 'SessionEnded') {
+    console.log(`[insertMonitoringRecordSafe] Intentando cerrar sesión en connector_sessions para ${charger_name} - ${connector_id}`);
+    const res = await pool.query(
+      `UPDATE connector_sessions
+       SET session_end = to_timestamp($1 / 1000.0),
+           duration_minutes = ROUND(EXTRACT(EPOCH FROM (to_timestamp($1 / 1000.0) - session_start)) / 60)
+       WHERE charger_name = $2 AND connector_id = $3 AND session_end IS NULL
+       RETURNING *`,
+      [timestamp, charger_name, connector_id]
+    );
+    console.log('[insertMonitoringRecordSafe] Resultado UPDATE:', res.rows);
+    if (res.rowCount === 0) {
+      console.warn('[insertMonitoringRecordSafe] No se encontró sesión activa para cerrar.');
+    }
+  }
+}
 
 app.listen(PORT, () => {
   console.log(`Servidor backend escuchando en puerto ${PORT}`);

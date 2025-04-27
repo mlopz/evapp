@@ -112,16 +112,74 @@ function App() {
             {error && <div className="text-center text-red-500">{error}</div>}
             {!loading && !error && !selectedCharger && !selectedConnectorId && (
               <>
-                {/* Resumen de cargadores y conectores */}
-                <div className="flex items-center justify-center gap-4 mb-2 text-gray-700">
-                  <span className="font-semibold">
-                    {chargers.length} cargadores rápidos
-                  </span>
-                  <span className="text-xl">•</span>
-                  <span className="font-semibold">
-                    {chargers.reduce((sum, c) => sum + (c.connectors?.length || 0), 0)} conectores totales
-                  </span>
+                <div className="flex flex-col gap-2 mb-4">
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded shadow transition"
+                      onClick={() => {
+                        fetch(`${API_URL}/api/connector-sessions/export`).then(res => {
+                          if (!res.ok) throw new Error('Error al exportar');
+                          return res.blob();
+                        }).then(blob => {
+                          const link = document.createElement('a');
+                          link.href = window.URL.createObjectURL(blob);
+                          link.download = 'connector_sessions.csv';
+                          document.body.appendChild(link);
+                          link.click();
+                          link.remove();
+                        }).catch(err => alert('No se pudo exportar: ' + err.message));
+                      }}
+                    >
+                      Exportar sesiones (CSV)
+                    </button>
+                    <button
+                      className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded shadow transition"
+                      onClick={() => {
+                        fetch(`${API_URL}/api/chargers/export`).then(res => {
+                          if (!res.ok) throw new Error('Error al exportar');
+                          return res.blob();
+                        }).then(blob => {
+                          const link = document.createElement('a');
+                          link.href = window.URL.createObjectURL(blob);
+                          link.download = 'chargers_connectors.csv';
+                          document.body.appendChild(link);
+                          link.click();
+                          link.remove();
+                        }).catch(err => alert('No se pudo exportar: ' + err.message));
+                      }}
+                    >
+                      Exportar cargadores (CSV)
+                    </button>
+                    <button
+                      className="bg-gray-700 hover:bg-gray-800 text-white font-semibold py-2 px-4 rounded shadow transition"
+                      onClick={() => {
+                        fetch(`${API_URL}/api/charger-monitoring/export`).then(res => {
+                          if (!res.ok) throw new Error('Error al exportar');
+                          return res.blob();
+                        }).then(blob => {
+                          const link = document.createElement('a');
+                          link.href = window.URL.createObjectURL(blob);
+                          link.download = 'charger_monitoring.csv';
+                          document.body.appendChild(link);
+                          link.click();
+                          link.remove();
+                        }).catch(err => alert('No se pudo exportar: ' + err.message));
+                      }}
+                    >
+                      Exportar eventos (CSV)
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-center gap-4 mt-2 text-gray-700">
+                    <span className="font-semibold">
+                      {chargers.length} cargadores rápidos
+                    </span>
+                    <span className="text-xl">•</span>
+                    <span className="font-semibold">
+                      {chargers.reduce((sum, c) => sum + (c.connectors?.length || 0), 0)} conectores totales
+                    </span>
+                  </div>
                 </div>
+                {/* Resumen de cargadores y conectores */}
                 <ChargerStatusCards
                   chargers={chargers}
                   loading={loading}
