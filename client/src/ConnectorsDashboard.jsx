@@ -1,5 +1,22 @@
 import React, { useEffect, useState } from 'react';
 
+function downloadCsv(url, filename) {
+  fetch(url)
+    .then(res => {
+      if (!res.ok) throw new Error('Error al exportar');
+      return res.blob();
+    })
+    .then(blob => {
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    })
+    .catch(err => alert('No se pudo exportar: ' + err.message));
+}
+
 function ConnectorsDashboard() {
   const [connectors, setConnectors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,10 +39,26 @@ function ConnectorsDashboard() {
   if (!connectors.length) return <div className="text-center text-gray-500">No hay conectores registrados aún.</div>;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {connectors.map(conn => (
-        <ConnectorCard key={conn.charger_name + conn.connector_id} data={conn} />
-      ))}
+    <div>
+      <div className="flex flex-wrap gap-3 mb-6">
+        <button
+          className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded shadow transition"
+          onClick={() => downloadCsv(`${process.env.REACT_APP_API_URL || ''}/api/connector-sessions/export`, 'connector_sessions.csv')}
+        >
+          Exportar sesiones (CSV)
+        </button>
+        <button
+          className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded shadow transition"
+          onClick={() => downloadCsv(`${process.env.REACT_APP_API_URL || ''}/api/chargers/export`, 'chargers_connectors.csv')}
+        >
+          Exportar cargadores (CSV)
+        </button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {connectors.map(conn => (
+          <ConnectorCard key={conn.charger_name + conn.connector_id} data={conn} />
+        ))}
+      </div>
     </div>
   );
 }

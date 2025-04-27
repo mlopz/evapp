@@ -645,6 +645,50 @@ app.get('/api/connector-sessions/summary', async (req, res) => {
   }
 });
 
+// --- Exportar sesiones de conectores en CSV ---
+app.get('/api/connector-sessions/export', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM connector_sessions ORDER BY charger_name, connector_id, session_start');
+    if (!rows.length) return res.status(404).send('No hay datos para exportar');
+    const csvHeader = Object.keys(rows[0]).join(',') + '\n';
+    const csvRows = rows.map(r => Object.values(r).map(v => (v === null ? '' : `"${String(v).replace(/"/g, '""')}"`)).join(',')).join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="connector_sessions.csv"');
+    res.send(csvHeader + csvRows);
+  } catch (err) {
+    console.error('[connector-sessions/export] Error:', err);
+    res.status(500).json({ error: 'Error exportando sesiones' });
+  }
+});
+
+// --- Exportar cargadores y conectores en CSV ---
+app.get('/api/chargers/export', async (req, res) => {
+  try {
+    // Suponemos que chargersData está actualizado en memoria
+    if (!chargersData.length) return res.status(404).send('No hay datos de cargadores');
+    // Aplanar cargadores y conectores
+    const flat = chargersData.flatMap(charger =>
+      (charger.connectors || []).map(conn => ({
+        charger_name: charger.name,
+        charger_location: charger.location || '',
+        connector_id: conn.connectorId,
+        connector_type: conn.type,
+        power: conn.power,
+        status: conn.status
+      }))
+    );
+    if (!flat.length) return res.status(404).send('No hay conectores para exportar');
+    const csvHeader = Object.keys(flat[0]).join(',') + '\n';
+    const csvRows = flat.map(r => Object.values(r).map(v => (v === null ? '' : `"${String(v).replace(/"/g, '""')}"`)).join(',')).join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="chargers_connectors.csv"');
+    res.send(csvHeader + csvRows);
+  } catch (err) {
+    console.error('[chargers/export] Error:', err);
+    res.status(500).json({ error: 'Error exportando cargadores' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Servidor backend escuchando en puerto ${PORT}`);
 });
