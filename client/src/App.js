@@ -36,8 +36,13 @@ function App() {
   const fetchAllSessions = async () => {
     try {
       const res = await fetch(`${API_URL}/api/sessions`);
+      if (!res.ok) throw new Error('Respuesta no OK');
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Respuesta no es JSON');
+      }
       const data = await res.json();
-      setSessions(data.sessions || []);
+      setSessions(Array.isArray(data) ? data : (data.sessions || []));
     } catch (err) {
       // No interrumpe el loading general
       console.error('Error al obtener todas las sesiones', err);
