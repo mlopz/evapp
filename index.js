@@ -113,13 +113,24 @@ function updateConnectorsState(newChargers) {
           power: connector.power || null,
           status: 'Charging',
           timestamp: now
-        }).catch(err => console.error('Error guardando evento Charging en PostgreSQL:', err));
+        }).catch(err => console.error('Error guardando sesión en PostgreSQL:', err));
       }
-      // Si está en Charging, sumar el tiempo de la sesión en curso al acumulado para mostrar en tiempo real
-      if (prev.state === 'Charging' && prev.sessionStart) {
-        prev.accumulatedMinutesDisplay = (prev.accumulatedMinutes || 0) + minutesBetween(prev.sessionStart, now);
-      } else {
-        prev.accumulatedMinutesDisplay = prev.accumulatedMinutes || 0;
+      // --- NUEVO: Cierre defensivo ante cambio de estado ---
+      if (
+        prev.state === 'Charging' &&
+        (newState === 'Available' || newState === 'Unavailable')
+      ) {
+        // Cerrar sesión activa en la base si existe
+        pool.query(
+          `UPDATE connector_sessions SET session_end = NOW(), duration_minutes = ROUND(EXTRACT(EPOCH FROM (NOW() - session_start))/60), quality = 'FORCED_CLOSE' WHERE charger_name = $1 AND connector_id = $2 AND session_end IS NULL`,
+          [chargerName, connectorId]
+        ).then(result => {
+          if (result.rowCount > 0) {
+            console.log(`[DEFENSIVE CLOSE] Sesión forzada cerrada para ${chargerName} - ${connectorId}`);
+          }
+        }).catch(err => {
+          console.error('[DEFENSIVE CLOSE] Error cerrando sesión forzada:', err);
+        });
       }
       prev.lastState = prev.state;
       prev.state = newState;
@@ -229,6 +240,44 @@ setInterval(() => {
   }
 }, 30 * 1000);
 
+// --- Cierre automático de sesiones por timeout o inactividad ---
+setInterval(async () => {
+  try {
+    // 2 horas en minutos
+    const MAX_SESSION_MINUTES = 120;
+    // 5 minutos de inactividad
+    const MAX_INACTIVITY_MINUTES = 5;
+    const now = new Date();
+    // Buscar sesiones activas
+    const { rows: activeSessions } = await pool.query(
+      `SELECT id, charger_name, connector_id, session_start, last_heartbeat, EXTRACT(EPOCH FROM (NOW() - session_start))/60 AS elapsed_minutes, EXTRACT(EPOCH FROM (NOW() - last_heartbeat))/60 AS inactivity_minutes
+       FROM connector_sessions WHERE session_end IS NULL`
+    );
+    for (const s of activeSessions) {
+      // Cierre por timeout total
+      if (s.elapsed_minutes > MAX_SESSION_MINUTES) {
+        await pool.query(
+          `UPDATE connector_sessions SET session_end = NOW(), duration_minutes = ROUND(EXTRACT(EPOCH FROM (NOW() - session_start))/60), quality = 'SESSION_TIMEOUT' WHERE id = $1`,
+          [s.id]
+        );
+        console.log(`[AUTO-CLOSE] Sesión id ${s.id} cerrada por duración > ${MAX_SESSION_MINUTES} min.`);
+        continue;
+      }
+      // Cierre por inactividad
+      if (s.last_heartbeat && s.inactivity_minutes > MAX_INACTIVITY_MINUTES) {
+        await pool.query(
+          `UPDATE connector_sessions SET session_end = NOW(), duration_minutes = ROUND(EXTRACT(EPOCH FROM (NOW() - session_start))/60), quality = 'INACTIVITY_TIMEOUT' WHERE id = $1`,
+          [s.id]
+        );
+        console.log(`[AUTO-CLOSE] Sesión id ${s.id} cerrada por inactividad > ${MAX_INACTIVITY_MINUTES} min.`);
+        continue;
+      }
+    }
+  } catch (err) {
+    console.error('[AUTO-CLOSE] Error al cerrar sesiones automáticas:', err);
+  }
+}, 60 * 1000); // Ejecuta cada minuto
+
 // --- Al iniciar el backend: cerrar y abrir sesiones si corresponde ---
 function closeAndOpenChargingSessionsOnStartup() {
   const now = Date.now();
@@ -246,6 +295,8 @@ function closeAndOpenChargingSessionsOnStartup() {
             status: 'SessionEnded',
             timestamp: now
           }).catch(err => console.error('Error cerrando sesión previa al iniciar backend:', err));
+          state.sessionStart = null;
+          state.state = 'Available';
         }
         // Abrir una nueva sesión Charging
         state.sessionStart = now;
@@ -553,6 +604,78 @@ app.get('/api/chargers/export', async (req, res) => {
   }
 });
 
+// --- Endpoint para actualizar el heartbeat de una sesión activa ---
+app.post('/api/heartbeat', async (req, res) => {
+  try {
+    const { charger_name, connector_id } = req.body;
+    if (!charger_name || !connector_id) {
+      return res.status(400).json({ ok: false, error: 'Faltan parámetros charger_name o connector_id' });
+    }
+    // Actualizar last_heartbeat de la sesión activa
+    const result = await pool.query(
+      `UPDATE connector_sessions
+       SET last_heartbeat = NOW()
+       WHERE charger_name = $1 AND connector_id = $2 AND session_end IS NULL
+       RETURNING *`,
+      [charger_name, connector_id]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ ok: false, error: 'No hay sesión activa para este conector.' });
+    }
+    res.json({ ok: true, updated: result.rows[0] });
+  } catch (err) {
+    console.error('[heartbeat] Error:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// --- Endpoint temporal para depurar y etiquetar sesiones ---
+app.post('/api/sessions/cleanup', async (req, res) => {
+  try {
+    // 1. Agregar columnas si no existen
+    await pool.query(`ALTER TABLE connector_sessions
+      ADD COLUMN IF NOT EXISTS last_heartbeat TIMESTAMP NULL DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS quality VARCHAR(20) NULL DEFAULT NULL;`);
+
+    // 2. Cerrar sesiones abiertas
+    const closeOpen = await pool.query(`UPDATE connector_sessions
+      SET session_end = NOW(),
+          duration_minutes = ROUND(EXTRACT(EPOCH FROM (NOW() - session_start)) / 60),
+          quality = COALESCE(quality, 'FORCED_CLOSE')
+      WHERE session_end IS NULL
+      RETURNING id;`);
+
+    // 3. Corregir sesiones demasiado largas (8h < dur <= 24h)
+    const tooLong = await pool.query(`UPDATE connector_sessions
+      SET quality = 'TOO_LONG'
+      WHERE duration_minutes > 480 AND duration_minutes <= 1440
+      RETURNING id;`);
+
+    // 4. Invalidar sesiones absurdas (negativas, cero, o >24h)
+    const invalid = await pool.query(`UPDATE connector_sessions
+      SET quality = 'INVALID'
+      WHERE duration_minutes <= 0 OR duration_minutes > 1440
+      RETURNING id;`);
+
+    // 5. Etiquetar sesiones normales
+    const ok = await pool.query(`UPDATE connector_sessions
+      SET quality = 'OK'
+      WHERE duration_minutes > 0 AND duration_minutes <= 480
+      RETURNING id;`);
+
+    res.json({
+      ok: true,
+      closed_open_sessions: closeOpen.rowCount,
+      too_long: tooLong.rowCount,
+      invalid: invalid.rowCount,
+      ok_quality: ok.rowCount
+    });
+  } catch (err) {
+    console.error('[sessions/cleanup] Error:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // --- Filtrar conectores lentos en inserciones y guardar sesión en connector_sessions ---
 async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp }) {
   console.log('[insertMonitoringRecordSafe] llamado con:', { charger_name, connector_type, connector_id, power, status, timestamp });
@@ -581,8 +704,8 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
     if (existing.length === 0) {
       try {
         const result = await pool.query(
-          `INSERT INTO connector_sessions (charger_name, connector_id, connector_type, power, session_start)
-           VALUES ($1, $2, $3, $4, to_timestamp($5 / 1000.0)) RETURNING *`,
+          `INSERT INTO connector_sessions (charger_name, connector_id, connector_type, power, session_start, last_heartbeat)
+           VALUES ($1, $2, $3, $4, to_timestamp($5 / 1000.0), to_timestamp($5 / 1000.0)) RETURNING *`,
           [charger_name, connector_id, connector_type, power, timestamp]
         );
         console.log('[insertMonitoringRecordSafe] INSERT exitoso:', result.rows);

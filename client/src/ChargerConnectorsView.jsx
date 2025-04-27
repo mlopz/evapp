@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { getConnectorAccumulatedMinutes } from './utils/sessionUtils';
 
 const stateColors = {
   active: 'bg-green-100 text-green-700 border-green-400',
@@ -24,6 +25,37 @@ export default function ChargerConnectorsView({ charger, onSelectConnector, sess
     return null;
   }
 
+  // --- Heartbeat integration ---
+  const [selectedConnector, setSelectedConnector] = useState(null);
+  useEffect(() => {
+    let heartbeatInterval = null;
+    // Solo enviar heartbeat si hay un conector seleccionado y está Charging
+    if (selectedConnector && selectedConnector.status === 'Charging') {
+      const sendHeartbeat = () => {
+        fetch(`${process.env.REACT_APP_API_URL}/api/heartbeat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            charger_name: charger.name,
+            connector_id: selectedConnector.connectorId
+          })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (!data.ok) {
+            console.warn('Heartbeat error:', data.error);
+          }
+        })
+        .catch(err => console.warn('Heartbeat fetch error:', err));
+      };
+      sendHeartbeat(); // Primer ping inmediato
+      heartbeatInterval = setInterval(sendHeartbeat, 60 * 1000); // Cada 60 segundos
+    }
+    return () => {
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+    };
+  }, [selectedConnector, charger]);
+
   return (
     <div className="max-w-xl mx-auto">
       <h2 className="text-xl font-bold mb-4 text-center">{charger.name}</h2>
@@ -32,18 +64,14 @@ export default function ChargerConnectorsView({ charger, onSelectConnector, sess
           const session = getSessionSummary(conn.connectorId);
           const isActive = session && session.status === 'active';
           // Calcular minutos acumulados para este conector
-          const sessionHistory = sessions.filter(s => s.charger_name === charger.name && s.connector_id === conn.connectorId);
-          let acumulado = sessionHistory.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
-          // Si hay sesión activa, sumar minutos desde session_start hasta ahora
-          const activeSession = sessionHistory.find(s => !s.session_end);
-          if (activeSession && activeSession.session_start) {
-            const extra = Math.floor((Date.now() - new Date(activeSession.session_start)) / 60000);
-            acumulado += extra;
-          }
+          const acumulado = getConnectorAccumulatedMinutes(sessions, charger.name, conn.connectorId);
           return (
             <button
               key={conn.connectorId}
-              onClick={() => onSelectConnector(conn.connectorId)}
+              onClick={() => {
+                onSelectConnector(conn.connectorId);
+                setSelectedConnector(session);
+              }}
               className={`rounded-xl shadow-lg p-6 transition-transform hover:scale-105 border-2 w-full text-left ${
                 isActive ? stateColors.active : stateColors.inactive
               }`}

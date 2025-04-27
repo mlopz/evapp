@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import ConnectorItem from './ConnectorItem';
+import { getChargerAccumulatedMinutes } from './utils/sessionUtils';
 
 function ChargersList({ chargers, onSelectCharger, sessions = [] }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -15,7 +16,8 @@ function ChargersList({ chargers, onSelectCharger, sessions = [] }) {
 
   // Calcular minutos acumulados por cargador usando el campo de conectores
   const chargersWithStats = filteredChargers.map((charger) => {
-    const totalMinutes = (charger.connectors || []).reduce((sum, conn) => sum + (conn.accumulatedMinutes || 0), 0);
+    const connectorIds = charger.connectors.map(conn => conn.connectorId);
+    const totalMinutes = getChargerAccumulatedMinutes(sessions, charger.name, connectorIds);
     // Contar sesiones de todos los conectores de este cargador
     const sessionCount = sessions
       ? sessions.filter(s => s.chargerName === charger.name).length

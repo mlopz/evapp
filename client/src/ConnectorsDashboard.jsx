@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { getConnectorAccumulatedMinutes, getChargerAccumulatedMinutes } from './utils/sessionUtils';
 
 function downloadCsv(url, filename) {
   fetch(url)
@@ -58,20 +59,15 @@ function ConnectorsDashboard() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {chargers.map((charger) => {
-          // Obtener todas las sesiones de este cargador
-          const chargerSessions = connectors.filter(s => s.charger_name === charger.charger_name);
-          // Minutos acumulados
-          let acumuladoTotal = chargerSessions.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
-          // Sumar minutos de sesiones activas
-          chargerSessions.forEach(conn => {
-            const activeSession = chargerSessions.find(s => s.connector_id === conn.connector_id && !s.session_end);
-            if (activeSession && activeSession.session_start) {
-              const extra = Math.floor((Date.now() - new Date(activeSession.session_start)) / 60000);
-              acumuladoTotal += extra;
-            }
-          });
+          // Obtener todos los conectores de este cargador
+          const chargerConnectors = connectors.filter(s => s.charger_name === charger.charger_name);
+          // Minutos acumulados del cargador: suma de los acumulados de cada conector
+          const connectorIds = chargerConnectors.map(conn => conn.connector_id);
+          let acumuladoTotal = getChargerAccumulatedMinutes(connectors, charger.charger_name, connectorIds);
+          // LOG: mostrar el total calculado para el cargador
+          console.log(`TOTAL acumulado para cargador ${charger.charger_name}:`, acumuladoTotal);
           // Cantidad de sesiones finalizadas
-          const sesionesFinalizadas = chargerSessions.filter(s => !!s.session_end).length;
+          const sesionesFinalizadas = chargerConnectors.filter(s => !!s.session_end).length;
           return (
             <div key={charger.charger_name} className="bg-white rounded-lg shadow p-6 mb-6">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
@@ -81,16 +77,10 @@ function ConnectorsDashboard() {
                   <span className="text-xs font-semibold text-blue-600">Sesiones acumuladas: {sesionesFinalizadas}</span>
                 </div>
               </div>
-              {chargerSessions.map(conn => {
-                // Calcular minutos acumulados para el conector
-                const connectorSessions = connectors.filter(s => s.connector_id === conn.connector_id);
-                let acumulado = connectorSessions.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
-                // Sumar minutos de sesiones activas
-                const activeSession = connectorSessions.find(s => s.connector_id === conn.connector_id && s.active);
-                if (activeSession && activeSession.session_start) {
-                  const extra = Math.floor((Date.now() - new Date(activeSession.session_start)) / 60000);
-                  acumulado += extra;
-                }
+              {chargerConnectors.map(conn => {
+                const acumulado = getConnectorAccumulatedMinutes(connectors, conn.charger_name, conn.connector_id);
+                // LOG: mostrar los minutos acumulados de cada conector
+                console.log(`Minutos acumulados en conector ${conn.connector_id}:`, acumulado);
                 return (
                   <ConnectorCard key={conn.charger_name + conn.connector_id} data={conn} acumulado={acumulado} />
                 );
