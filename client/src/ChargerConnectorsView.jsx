@@ -19,7 +19,7 @@ export default function ChargerConnectorsView({ charger, onSelectConnector, sess
     // Buscar la última sesión cerrada
     const closed = sessions
       .filter(s => s.charger_name === charger.name && s.connector_id === connectorId && !s.active)
-      .sort((a, b) => new Date(b.session_end) - new Date(a.session_end))[0];
+      .sort((a, b) => new Date(b.session_end) - new Date(a.session_start))[0];
     if (closed) return { ...closed, status: 'inactive' };
     return null;
   }
@@ -31,6 +31,15 @@ export default function ChargerConnectorsView({ charger, onSelectConnector, sess
         {charger.connectors.map((conn) => {
           const session = getSessionSummary(conn.connectorId);
           const isActive = session && session.status === 'active';
+          // Calcular minutos acumulados para este conector
+          const sessionHistory = sessions.filter(s => s.charger_name === charger.name && s.connector_id === conn.connectorId);
+          let acumulado = sessionHistory.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+          // Si hay sesión activa, sumar minutos desde session_start hasta ahora
+          const activeSession = sessionHistory.find(s => !s.session_end);
+          if (activeSession && activeSession.session_start) {
+            const extra = Math.floor((Date.now() - new Date(activeSession.session_start)) / 60000);
+            acumulado += extra;
+          }
           return (
             <button
               key={conn.connectorId}
@@ -79,8 +88,9 @@ export default function ChargerConnectorsView({ charger, onSelectConnector, sess
                   <span className="italic text-gray-400">Sin sesiones registradas</span>
                 )}
               </div>
-              <div className="flex justify-end mt-4">
+              <div className="flex justify-between items-center mt-4">
                 <span className="text-xs text-gray-400">ID: {conn.connectorId}</span>
+                <span className="text-xs font-semibold text-orange-600">Minutos acumulados: {acumulado} min</span>
               </div>
             </button>
           );
