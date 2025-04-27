@@ -58,22 +58,28 @@ function ConnectorsDashboard() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {chargers.map((charger) => {
-          // Calcular minutos acumulados para el cargador (sumando todos sus conectores)
+          // Obtener todas las sesiones de este cargador
           const chargerSessions = connectors.filter(s => s.charger_name === charger.charger_name);
+          // Minutos acumulados
           let acumuladoTotal = chargerSessions.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
           // Sumar minutos de sesiones activas
           chargerSessions.forEach(conn => {
-            const activeSession = chargerSessions.find(s => s.connector_id === conn.connector_id && s.active);
+            const activeSession = chargerSessions.find(s => s.connector_id === conn.connector_id && !s.session_end);
             if (activeSession && activeSession.session_start) {
               const extra = Math.floor((Date.now() - new Date(activeSession.session_start)) / 60000);
               acumuladoTotal += extra;
             }
           });
+          // Cantidad de sesiones finalizadas
+          const sesionesFinalizadas = chargerSessions.filter(s => !!s.session_end).length;
           return (
             <div key={charger.charger_name} className="bg-white rounded-lg shadow p-6 mb-6">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
                 <h2 className="text-2xl font-bold text-gray-800 mb-2 md:mb-0">{charger.charger_name}</h2>
-                <span className="text-xs font-semibold text-orange-600">Minutos acumulados (cargador): {acumuladoTotal} min</span>
+                <div className="flex flex-col md:items-end md:gap-1">
+                  <span className="text-xs font-semibold text-orange-600">Minutos acumulados (cargador): {acumuladoTotal} min</span>
+                  <span className="text-xs font-semibold text-blue-600">Sesiones acumuladas: {sesionesFinalizadas}</span>
+                </div>
               </div>
               {chargerSessions.map(conn => {
                 // Calcular minutos acumulados para el conector
