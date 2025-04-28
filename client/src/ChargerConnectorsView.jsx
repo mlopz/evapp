@@ -56,6 +56,28 @@ export default function ChargerConnectorsView({ charger, onSelectConnector, sess
     };
   }, [selectedConnector, charger]);
 
+  function ConnectorStats({ connector }) {
+    const [stats, setStats] = useState({ total_sessions: 0, total_minutes: 0 });
+    useEffect(() => {
+      if (!connector?.connectorId) return;
+      fetch(`${process.env.REACT_APP_API_URL}/api/sessions/stats?connector_id=${encodeURIComponent(connector.connectorId)}`)
+        .then(res => res.json())
+        .then(data => setStats({
+          total_sessions: data.total_sessions || 0,
+          total_minutes: data.total_minutes || 0
+        }))
+        .catch(() => setStats({ total_sessions: 0, total_minutes: 0 }));
+    }, [connector?.connectorId]);
+    return (
+      <div className="flex flex-col items-center mt-2">
+        <span className="text-lg font-bold text-orange-600">{stats.total_minutes}</span>
+        <span className="text-gray-600">Minutos acumulados</span>
+        <span className="text-lg font-bold text-orange-600 mt-1">{stats.total_sessions}</span>
+        <span className="text-gray-600">Sesiones totales</span>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-xl mx-auto">
       <h2 className="text-xl font-bold mb-4 text-center">{charger.name}</h2>
@@ -120,6 +142,7 @@ export default function ChargerConnectorsView({ charger, onSelectConnector, sess
                 <span className="text-xs text-gray-400">ID: {conn.connectorId}</span>
                 <span className="text-xs font-semibold text-orange-600">Minutos acumulados: {acumulado} min</span>
               </div>
+              <ConnectorStats connector={conn} />
             </button>
           );
         })}

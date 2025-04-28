@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 function formatDate(ts) {
   if (!ts) return '-';
@@ -40,7 +40,23 @@ function QualityBadge({ quality }) {
   );
 }
 
-function SessionsList({ sessions, onBack, connectorId }) {
+function SessionsList({ sessions, onBack, connectorId, chargerName }) {
+  const [stats, setStats] = useState({ total_sessions: 0, total_minutes: 0 });
+  useEffect(() => {
+    let url = `${process.env.REACT_APP_API_URL}/api/sessions/stats`;
+    const params = [];
+    if (chargerName) params.push(`charger_name=${encodeURIComponent(chargerName)}`);
+    if (connectorId) params.push(`connector_id=${encodeURIComponent(connectorId)}`);
+    if (params.length) url += `?${params.join('&')}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => setStats({
+        total_sessions: data.total_sessions || 0,
+        total_minutes: data.total_minutes || 0
+      }))
+      .catch(() => setStats({ total_sessions: 0, total_minutes: 0 }));
+  }, [chargerName, connectorId]);
+
   // Log de depuración para ver las sesiones recibidas
   console.log('Sesiones a mostrar:', sessions, 'para connectorId:', connectorId);
 
@@ -61,6 +77,10 @@ function SessionsList({ sessions, onBack, connectorId }) {
           </button>
         )}
         <h2 className="text-xl font-bold text-gray-800">Historial de sesiones</h2>
+      </div>
+      <div className="flex gap-8 mb-2">
+        <div className="text-sm text-gray-700">Minutos acumulados: <b>{stats.total_minutes}</b></div>
+        <div className="text-sm text-gray-700">Sesiones totales: <b>{stats.total_sessions}</b></div>
       </div>
       {filteredSessions.length === 0 ? (
         <div className="text-center text-gray-500">No hay sesiones registradas para este conector.</div>
