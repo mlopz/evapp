@@ -7,26 +7,28 @@ import ClearDatabasePage from './ClearDatabasePage';
 import './index.css';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import ConnectorStatusCards from './ConnectorStatusCards';
+import ChargerCardModal from './ChargerCardModal';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
-function ChargerStatsRow({ charger }) {
-  const [stats, setStats] = useState({ total_sessions: 0, total_minutes: 0 });
-  useEffect(() => {
-    fetch(`${process.env.REACT_APP_API_URL}/api/sessions/stats?charger_name=${encodeURIComponent(charger.name)}`)
-      .then(res => res.json())
-      .then(data => setStats({
-        total_sessions: data.total_sessions || 0,
-        total_minutes: data.total_minutes || 0
-      }))
-      .catch(() => setStats({ total_sessions: 0, total_minutes: 0 }));
-  }, [charger.name]);
+function ChargerCard({ charger, minutes, sessions, onClick }) {
   return (
-    <tr className="border-b">
-      <td className="py-2 px-4 font-semibold text-gray-800">{charger.name}</td>
-      <td className="py-2 px-4 text-orange-700">{stats.total_minutes}</td>
-      <td className="py-2 px-4 text-orange-700">{stats.total_sessions}</td>
-    </tr>
+    <button
+      className="rounded-xl shadow-lg p-6 bg-white border-2 w-full flex flex-col items-center hover:scale-105 hover:border-orange-500 transition cursor-pointer mb-4"
+      onClick={onClick}
+    >
+      <div className="text-lg font-bold text-gray-800 mb-2">{charger.name}</div>
+      <div className="flex gap-6 mb-1">
+        <div className="flex flex-col items-center">
+          <span className="text-xl font-bold text-orange-600">{minutes}</span>
+          <span className="text-xs text-gray-500">Minutos</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <span className="text-xl font-bold text-orange-600">{sessions}</span>
+          <span className="text-xs text-gray-500">Sesiones</span>
+        </div>
+      </div>
+    </button>
   );
 }
 
@@ -40,6 +42,7 @@ function App() {
   const [selectedConnectorId, setSelectedConnectorId] = useState(null);
   const [stats, setStats] = useState({ total_sessions: 0, total_minutes: 0 });
   const [selectedStatus, setSelectedStatus] = useState(null);
+  const [modalCharger, setModalCharger] = useState(null);
 
   const fetchChargers = async () => {
     setLoading(true);
@@ -134,30 +137,36 @@ function App() {
     ? chargers.filter(c => (c.connectors || []).some(conn => conn.status === selectedStatus))
     : [];
 
+  // Estado para stats por cargador
+  const [chargerStats, setChargerStats] = useState({});
+  useEffect(() => {
+    if (!filteredChargers.length) return;
+    filteredChargers.forEach(charger => {
+      fetch(`${process.env.REACT_APP_API_URL}/api/sessions/stats?charger_name=${encodeURIComponent(charger.name)}`)
+        .then(res => res.json())
+        .then(data => {
+          setChargerStats(prev => ({ ...prev, [charger.name]: data }));
+        });
+    });
+  }, [filteredChargers]);
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <ConnectorStatusCards chargers={chargers} onSelectStatus={setSelectedStatus} selectedStatus={selectedStatus} />
       {selectedStatus && (
-        <div className="mt-8">
-          <h2 className="text-xl font-bold mb-4 text-gray-800">Cargadores en estado "{selectedStatus === 'Charging' ? 'Cargando' : selectedStatus === 'Available' ? 'Disponible' : 'Fuera de servicio'}"</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white rounded shadow">
-              <thead>
-                <tr>
-                  <th className="py-2 px-4 text-left">Nombre</th>
-                  <th className="py-2 px-4 text-left">Minutos acumulados</th>
-                  <th className="py-2 px-4 text-left">Sesiones totales</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredChargers.map(charger => (
-                  <ChargerStatsRow key={charger.name} charger={charger} />
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {filteredChargers.map(charger => (
+            <ChargerCard
+              key={charger.name}
+              charger={charger}
+              minutes={chargerStats[charger.name]?.total_minutes || 0}
+              sessions={chargerStats[charger.name]?.total_sessions || 0}
+              onClick={() => setModalCharger(charger)}
+            />
+          ))}
         </div>
       )}
+      <ChargerCardModal charger={modalCharger} onClose={() => setModalCharger(null)} />
     </div>
   );
 }

@@ -714,7 +714,7 @@ app.post('/api/sessions/cleanup', async (req, res) => {
   }
 });
 
-// --- ENDPOINT: Estadísticas globales de sesiones ---
+// --- ENDPOINT: Estadísticas globales de sesiones (solo conectores activos: power >= 60) ---
 app.get('/api/sessions/stats', async (req, res) => {
   try {
     const { from, to, charger_name, connector_id } = req.query;
@@ -728,13 +728,29 @@ app.get('/api/sessions/stats', async (req, res) => {
       params.push(to);
       where += ` AND session_start <= $${params.length}`;
     }
-    if (charger_name) {
-      params.push(charger_name);
-      where += ` AND charger_name = $${params.length}`;
-    }
     if (connector_id) {
       params.push(connector_id);
       where += ` AND connector_id = $${params.length}`;
+    }
+    // Solo filtrar por conectores activos si se consulta por cargador
+    if (charger_name && !connector_id) {
+      // Buscar los connector_id activos (power >= 60) de ese cargador
+      const activeConnectors = await pool.query(
+        `SELECT DISTINCT connector_id FROM connector_sessions WHERE charger_name = $1 AND power >= 60` ,
+        [charger_name]
+      );
+      const ids = activeConnectors.rows.map(r => r.connector_id).filter(Boolean);
+      if (ids.length === 0) {
+        return res.json({ total_sessions: 0, total_minutes: 0 });
+      }
+      params.push(charger_name);
+      where += ` AND charger_name = $${params.length}`;
+      // Agregar filtro por lista de connector_id activos
+      where += ` AND connector_id = ANY($${params.length + 1})`;
+      params.push(ids);
+    } else if (charger_name) {
+      params.push(charger_name);
+      where += ` AND charger_name = $${params.length}`;
     }
     const stats = await pool.query(
       `SELECT COUNT(*) AS total_sessions, COALESCE(SUM(duration_minutes),0) AS total_minutes FROM connector_sessions ${where}`,
@@ -747,6 +763,10 @@ app.get('/api/sessions/stats', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Error obteniendo estadísticas' });
   }
+});
+
+app.listen(PORT, () => {
+  console.log(`Servidor backend escuchando en puerto ${PORT}`);
 });
 
 // --- Filtrar conectores lentos en inserciones y guardar sesión en connector_sessions ---
@@ -816,7 +836,3 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
     }
   }
 }
-
-app.listen(PORT, () => {
-  console.log(`Servidor backend escuchando en puerto ${PORT}`);
-});
