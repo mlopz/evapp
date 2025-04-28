@@ -301,9 +301,22 @@ function normalizeSessionDuration(duration) {
   return duration;
 }
 
-// --- Al iniciar el backend: cerrar y abrir sesiones si corresponde ---
+// --- Al iniciar el backend: sincronizar estado antes de cerrar/abrir sesiones ---
+async function syncAndCloseAndOpenChargingSessionsOnStartup() {
+  console.log('--- [SYNC] Sincronizando estado inicial desde la API antes de gestionar sesiones ---');
+  await pollChargers(); // Espera a que pollChargers actualice chargersData y connectorsState
+  setTimeout(() => {
+    closeAndOpenChargingSessionsOnStartup();
+  }, 1000); // Espera 1 segundo extra para asegurar actualización en memoria
+}
+
+// Reemplazar el setTimeout existente para usar la versión robusta
+setTimeout(syncAndCloseAndOpenChargingSessionsOnStartup, 2000); // Menor espera porque pollChargers es await
+
 function closeAndOpenChargingSessionsOnStartup() {
   const now = Date.now();
+  let closed = 0;
+  let opened = 0;
   for (const chargerName in connectorsState) {
     for (const connectorId in connectorsState[chargerName]) {
       const state = connectorsState[chargerName][connectorId];
@@ -320,6 +333,7 @@ function closeAndOpenChargingSessionsOnStartup() {
           }).catch(err => console.error('Error cerrando sesión previa al iniciar backend:', err));
           state.sessionStart = null;
           state.state = 'Available';
+          closed++;
         }
         // Abrir una nueva sesión Charging
         state.sessionStart = now;
@@ -331,14 +345,14 @@ function closeAndOpenChargingSessionsOnStartup() {
           status: 'Charging',
           timestamp: now
         }).catch(err => console.error('Error abriendo nueva sesión Charging al iniciar backend:', err));
+        opened++;
       }
     }
   }
+  console.log(`[REINICIO] Sesiones cerradas: ${closed}, sesiones abiertas: ${opened}`);
 }
 
-// Ejecutar al iniciar el backend
-setTimeout(closeAndOpenChargingSessionsOnStartup, 3000); // Espera 3 segundos por si hay inicialización previa
-
+// --- Cierre automático de sesiones por inactividad de la API ---
 setInterval(pollChargers, POLL_INTERVAL);
 pollChargers();
 
