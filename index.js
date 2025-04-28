@@ -714,6 +714,33 @@ app.post('/api/sessions/cleanup', async (req, res) => {
   }
 });
 
+// --- ENDPOINT: Estadísticas globales de sesiones ---
+app.get('/api/sessions/stats', async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    let where = "WHERE duration_minutes IS NOT NULL";
+    let params = [];
+    if (from) {
+      params.push(from);
+      where += ` AND session_start >= $${params.length}`;
+    }
+    if (to) {
+      params.push(to);
+      where += ` AND session_start <= $${params.length}`;
+    }
+    const stats = await pool.query(
+      `SELECT COUNT(*) AS total_sessions, COALESCE(SUM(duration_minutes),0) AS total_minutes FROM connector_sessions ${where}`,
+      params
+    );
+    res.json({
+      total_sessions: parseInt(stats.rows[0].total_sessions, 10),
+      total_minutes: parseInt(stats.rows[0].total_minutes, 10)
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Error obteniendo estadísticas' });
+  }
+});
+
 // --- Filtrar conectores lentos en inserciones y guardar sesión en connector_sessions ---
 async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp }) {
   console.log('[insertMonitoringRecordSafe] llamado con:', { charger_name, connector_type, connector_id, power, status, timestamp });

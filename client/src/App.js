@@ -17,6 +17,7 @@ function App() {
   const [filterStatus, setFilterStatus] = useState(null);
   const [selectedCharger, setSelectedCharger] = useState(null);
   const [selectedConnectorId, setSelectedConnectorId] = useState(null);
+  const [stats, setStats] = useState({ total_sessions: 0, total_minutes: 0 });
 
   const fetchChargers = async () => {
     setLoading(true);
@@ -53,6 +54,19 @@ function App() {
     let interval;
     fetchChargers();
     fetchAllSessions();
+    const fetchStats = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/sessions/stats`);
+        const data = await res.json();
+        setStats({
+          total_sessions: data.total_sessions || 0,
+          total_minutes: data.total_minutes || 0
+        });
+      } catch (err) {
+        setStats({ total_sessions: 0, total_minutes: 0 });
+      }
+    };
+    fetchStats();
     interval = setInterval(() => {
       fetchChargers();
       fetchAllSessions();
@@ -117,6 +131,16 @@ function App() {
             {error && <div className="text-center text-red-500">{error}</div>}
             {!loading && !error && !selectedCharger && !selectedConnectorId && (
               <>
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
+                    <span className="text-4xl font-bold text-orange-600">{stats.total_minutes}</span>
+                    <span className="text-gray-600 mt-2">Minutos acumulados</span>
+                  </div>
+                  <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
+                    <span className="text-4xl font-bold text-orange-600">{stats.total_sessions}</span>
+                    <span className="text-gray-600 mt-2">Sesiones totales</span>
+                  </div>
+                </div>
                 <div className="flex flex-col gap-2 mb-4">
                   <div className="flex flex-wrap gap-3">
                     <button
