@@ -256,18 +256,34 @@ setInterval(async () => {
     for (const s of activeSessions) {
       // Cierre por timeout total
       if (s.elapsed_minutes > MAX_SESSION_MINUTES) {
+        let rawDuration = Math.round((Date.now() - new Date(s.session_start).getTime()) / 60000);
+        let duration = normalizeSessionDuration(rawDuration);
+        if (duration === null) {
+          // Eliminar sesión si ya existe
+          await pool.query('DELETE FROM connector_sessions WHERE id = $1', [s.id]);
+          console.log(`[AUTO-CLEAN] Sesión id ${s.id} eliminada por ser < 5 min.`);
+          continue;
+        }
         await pool.query(
-          `UPDATE connector_sessions SET session_end = NOW(), duration_minutes = ROUND(EXTRACT(EPOCH FROM (NOW() - session_start))/60), quality = 'SESSION_TIMEOUT' WHERE id = $1`,
-          [s.id]
+          `UPDATE connector_sessions SET session_end = NOW(), duration_minutes = $1, quality = 'SESSION_TIMEOUT' WHERE id = $2`,
+          [duration, s.id]
         );
         console.log(`[AUTO-CLOSE] Sesión id ${s.id} cerrada por duración > ${MAX_SESSION_MINUTES} min.`);
         continue;
       }
       // Cierre por inactividad
       if (s.last_heartbeat && s.inactivity_minutes > MAX_INACTIVITY_MINUTES) {
+        let rawDuration = Math.round((Date.now() - new Date(s.session_start).getTime()) / 60000);
+        let duration = normalizeSessionDuration(rawDuration);
+        if (duration === null) {
+          // Eliminar sesión si ya existe
+          await pool.query('DELETE FROM connector_sessions WHERE id = $1', [s.id]);
+          console.log(`[AUTO-CLEAN] Sesión id ${s.id} eliminada por ser < 5 min.`);
+          continue;
+        }
         await pool.query(
-          `UPDATE connector_sessions SET session_end = NOW(), duration_minutes = ROUND(EXTRACT(EPOCH FROM (NOW() - session_start))/60), quality = 'INACTIVITY_TIMEOUT' WHERE id = $1`,
-          [s.id]
+          `UPDATE connector_sessions SET session_end = NOW(), duration_minutes = $1, quality = 'INACTIVITY_TIMEOUT' WHERE id = $2`,
+          [duration, s.id]
         );
         console.log(`[AUTO-CLOSE] Sesión id ${s.id} cerrada por inactividad > ${MAX_INACTIVITY_MINUTES} min.`);
         continue;
@@ -277,6 +293,13 @@ setInterval(async () => {
     console.error('[AUTO-CLOSE] Error al cerrar sesiones automáticas:', err);
   }
 }, 60 * 1000); // Ejecuta cada minuto
+
+// --- Utilidad para normalizar duración según política ---
+function normalizeSessionDuration(duration) {
+  if (duration > 100) return 60;
+  if (duration < 5) return null; // Indica que debe eliminarse/no guardarse
+  return duration;
+}
 
 // --- Al iniciar el backend: cerrar y abrir sesiones si corresponde ---
 function closeAndOpenChargingSessionsOnStartup() {
@@ -337,6 +360,16 @@ app.get('/api/chargers', (req, res) => {
     chargers: filteredChargers,
     lastPoll: lastPollTimestamp,
   });
+});
+
+// --- ENDPOINT TEMPORAL: Listar sesiones para frontend ---
+app.get('/api/sessions', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM connector_sessions ORDER BY session_start DESC LIMIT 100');
+    res.json({ sessions: rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Error obteniendo sesiones' });
+  }
 });
 
 app.get('/api/sessions', async (req, res) => {
@@ -663,6 +696,11 @@ app.post('/api/sessions/cleanup', async (req, res) => {
       WHERE duration_minutes > 0 AND duration_minutes <= 480
       RETURNING id;`);
 
+    // Eliminar sesiones cortas
+    await pool.query('DELETE FROM connector_sessions WHERE duration_minutes < 5');
+    // Actualizar sesiones largas
+    await pool.query('UPDATE connector_sessions SET duration_minutes = 60 WHERE duration_minutes > 100');
+
     res.json({
       ok: true,
       closed_open_sessions: closeOpen.rowCount,
@@ -728,6 +766,18 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
     console.log('[insertMonitoringRecordSafe] Resultado UPDATE:', res.rows);
     if (res.rowCount === 0) {
       console.warn('[insertMonitoringRecordSafe] No se encontró sesión activa para cerrar.');
+    }
+    let rawDuration = Math.round((new Date(timestamp) - new Date(res.rows[0].session_start).getTime()) / 60000);
+    let duration = normalizeSessionDuration(rawDuration);
+    if (duration === null) {
+      // Eliminar sesión si ya existe
+      await pool.query('DELETE FROM connector_sessions WHERE id = $1', [res.rows[0].id]);
+      console.log(`[AUTO-CLEAN] Sesión id ${res.rows[0].id} eliminada por ser < 5 min.`);
+    } else {
+      await pool.query(
+        `UPDATE connector_sessions SET duration_minutes = $1 WHERE id = $2`,
+        [duration, res.rows[0].id]
+      );
     }
   }
 }
