@@ -6,8 +6,29 @@ import ChargerConnectorsView from './ChargerConnectorsView';
 import ClearDatabasePage from './ClearDatabasePage';
 import './index.css';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import ConnectorStatusCards from './ConnectorStatusCards';
 
 const API_URL = process.env.REACT_APP_API_URL;
+
+function ChargerStatsRow({ charger }) {
+  const [stats, setStats] = useState({ total_sessions: 0, total_minutes: 0 });
+  useEffect(() => {
+    fetch(`${process.env.REACT_APP_API_URL}/api/sessions/stats?charger_name=${encodeURIComponent(charger.name)}`)
+      .then(res => res.json())
+      .then(data => setStats({
+        total_sessions: data.total_sessions || 0,
+        total_minutes: data.total_minutes || 0
+      }))
+      .catch(() => setStats({ total_sessions: 0, total_minutes: 0 }));
+  }, [charger.name]);
+  return (
+    <tr className="border-b">
+      <td className="py-2 px-4 font-semibold text-gray-800">{charger.name}</td>
+      <td className="py-2 px-4 text-orange-700">{stats.total_minutes}</td>
+      <td className="py-2 px-4 text-orange-700">{stats.total_sessions}</td>
+    </tr>
+  );
+}
 
 function App() {
   const [chargers, setChargers] = useState([]);
@@ -18,6 +39,7 @@ function App() {
   const [selectedCharger, setSelectedCharger] = useState(null);
   const [selectedConnectorId, setSelectedConnectorId] = useState(null);
   const [stats, setStats] = useState({ total_sessions: 0, total_minutes: 0 });
+  const [selectedStatus, setSelectedStatus] = useState(null);
 
   const fetchChargers = async () => {
     setLoading(true);
@@ -107,145 +129,36 @@ function App() {
     }
   }, [sessions]);
 
+  // Filtrar cargadores según el estado seleccionado
+  const filteredChargers = selectedStatus
+    ? chargers.filter(c => (c.connectors || []).some(conn => conn.status === selectedStatus))
+    : [];
+
   return (
-    <Router>
-      <Routes>
-        {/* Ruta oculta para limpiar la base de datos */}
-        <Route path="/limpiar-db" element={<ClearDatabasePage />} />
-        {/* Resto de la app */}
-        <Route path="/*" element={
-          <div className="min-h-screen bg-gray-100 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-2xl font-bold text-gray-800">EV Chargers Monitor</h1>
-              {(selectedCharger || selectedConnectorId) && (
-                <button
-                  className="px-4 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  onClick={() => {
-                    setSelectedConnectorId(null);
-                    setSelectedCharger(null);
-                  }}
-                >Volver</button>
-              )}
-            </div>
-            {loading && <div className="text-center text-gray-500">Cargando...</div>}
-            {error && <div className="text-center text-red-500">{error}</div>}
-            {!loading && !error && !selectedCharger && !selectedConnectorId && (
-              <>
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
-                    <span className="text-4xl font-bold text-orange-600">{stats.total_minutes}</span>
-                    <span className="text-gray-600 mt-2">Minutos acumulados</span>
-                  </div>
-                  <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
-                    <span className="text-4xl font-bold text-orange-600">{stats.total_sessions}</span>
-                    <span className="text-gray-600 mt-2">Sesiones totales</span>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 mb-4">
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded shadow transition"
-                      onClick={() => {
-                        fetch(`${API_URL}/api/connector-sessions/export`).then(res => {
-                          if (!res.ok) throw new Error('Error al exportar');
-                          return res.blob();
-                        }).then(blob => {
-                          const link = document.createElement('a');
-                          link.href = window.URL.createObjectURL(blob);
-                          link.download = 'connector_sessions.csv';
-                          document.body.appendChild(link);
-                          link.click();
-                          link.remove();
-                        }).catch(err => alert('No se pudo exportar: ' + err.message));
-                      }}
-                    >
-                      Exportar sesiones (CSV)
-                    </button>
-                    <button
-                      className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded shadow transition"
-                      onClick={() => {
-                        fetch(`${API_URL}/api/chargers/export`).then(res => {
-                          if (!res.ok) throw new Error('Error al exportar');
-                          return res.blob();
-                        }).then(blob => {
-                          const link = document.createElement('a');
-                          link.href = window.URL.createObjectURL(blob);
-                          link.download = 'chargers_connectors.csv';
-                          document.body.appendChild(link);
-                          link.click();
-                          link.remove();
-                        }).catch(err => alert('No se pudo exportar: ' + err.message));
-                      }}
-                    >
-                      Exportar cargadores (CSV)
-                    </button>
-                    <button
-                      className="bg-gray-700 hover:bg-gray-800 text-white font-semibold py-2 px-4 rounded shadow transition"
-                      onClick={() => {
-                        fetch(`${API_URL}/api/charger-monitoring/export`).then(res => {
-                          if (!res.ok) throw new Error('Error al exportar');
-                          return res.blob();
-                        }).then(blob => {
-                          const link = document.createElement('a');
-                          link.href = window.URL.createObjectURL(blob);
-                          link.download = 'charger_monitoring.csv';
-                          document.body.appendChild(link);
-                          link.click();
-                          link.remove();
-                        }).catch(err => alert('No se pudo exportar: ' + err.message));
-                      }}
-                    >
-                      Exportar eventos (CSV)
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-center gap-4 mt-2 text-gray-700">
-                    <span className="font-semibold">
-                      {chargers.length} cargadores rápidos
-                    </span>
-                    <span className="text-xl">•</span>
-                    <span className="font-semibold">
-                      {chargers.reduce((sum, c) => sum + (c.connectors?.length || 0), 0)} conectores totales
-                    </span>
-                  </div>
-                </div>
-                {/* Resumen de cargadores y conectores */}
-                <ChargerStatusCards
-                  chargers={chargers}
-                  loading={loading}
-                  selected={filterStatus}
-                  onSelect={setFilterStatus}
-                />
-                <ChargersList
-                  chargers={filterStatus ? chargers.filter(c =>
-                    filterStatus === 'Charging' ? c.connectors.some(conn => conn.state === 'Charging') :
-                    filterStatus === 'Available' ? (!c.connectors.some(conn => conn.state === 'Charging') && c.connectors.some(conn => conn.state === 'Available')) :
-                    (!c.connectors.some(conn => conn.state === 'Charging') && !c.connectors.some(conn => conn.state === 'Available'))
-                  ) : chargers}
-                  onSelectCharger={setSelectedCharger}
-                  sessions={sessions}
-                />
-              </>
-            )}
-            {/* Mostrar conectores de un cargador seleccionado */}
-            {!loading && !error && selectedCharger && !selectedConnectorId && (
-              <ChargerConnectorsView
-                charger={selectedCharger}
-                onSelectConnector={setSelectedConnectorId}
-                sessions={sessions}
-              />
-            )}
-            {/* Mostrar sesiones de un conector seleccionado */}
-            {!loading && !error && selectedConnectorId && selectedCharger && (
-              <SessionsList
-                sessions={sessions}
-                onBack={() => setSelectedConnectorId(null)}
-                connectorId={selectedConnectorId}
-              />
-            )}
+    <div className="min-h-screen bg-gray-50 p-6">
+      <ConnectorStatusCards chargers={chargers} onSelectStatus={setSelectedStatus} selectedStatus={selectedStatus} />
+      {selectedStatus && (
+        <div className="mt-8">
+          <h2 className="text-xl font-bold mb-4 text-gray-800">Cargadores en estado "{selectedStatus === 'Charging' ? 'Cargando' : selectedStatus === 'Available' ? 'Disponible' : 'Fuera de servicio'}"</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white rounded shadow">
+              <thead>
+                <tr>
+                  <th className="py-2 px-4 text-left">Nombre</th>
+                  <th className="py-2 px-4 text-left">Minutos acumulados</th>
+                  <th className="py-2 px-4 text-left">Sesiones totales</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredChargers.map(charger => (
+                  <ChargerStatsRow key={charger.name} charger={charger} />
+                ))}
+              </tbody>
+            </table>
           </div>
-        } />
-      </Routes>
-    </Router>
+        </div>
+      )}
+    </div>
   );
 }
 

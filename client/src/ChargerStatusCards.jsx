@@ -68,13 +68,8 @@ function ChargerStatusCard({ charger }) {
   );
 }
 
-export default function ChargerStatusCardsContainer({ chargers, loading, onSelectCharger, selectedCharger }) {
-  return (
-    <div>
-      <ChargerStatusCards chargers={chargers} loading={loading} onSelectCharger={onSelectCharger} selectedCharger={selectedCharger} />
-      {chargers.map(charger => (
-        <ChargerStatusCard key={charger.name} charger={charger} />
-      ))}
-    </div>
-  );
-}
+// Elimina el renderizado de la lista larga de ChargerStatusCard en el home
+// Solo deja ChargerStatusCards (estado general en tiempo real)
+// Si necesitas mostrar los totales históricos por cargador, hazlo solo en la vista de detalle, no aquí
+
+export default ChargerStatusCards;

@@ -717,7 +717,7 @@ app.post('/api/sessions/cleanup', async (req, res) => {
 // --- ENDPOINT: Estadísticas globales de sesiones ---
 app.get('/api/sessions/stats', async (req, res) => {
   try {
-    const { from, to } = req.query;
+    const { from, to, charger_name, connector_id } = req.query;
     let where = "WHERE duration_minutes IS NOT NULL";
     let params = [];
     if (from) {
@@ -727,6 +727,14 @@ app.get('/api/sessions/stats', async (req, res) => {
     if (to) {
       params.push(to);
       where += ` AND session_start <= $${params.length}`;
+    }
+    if (charger_name) {
+      params.push(charger_name);
+      where += ` AND charger_name = $${params.length}`;
+    }
+    if (connector_id) {
+      params.push(connector_id);
+      where += ` AND connector_id = $${params.length}`;
     }
     const stats = await pool.query(
       `SELECT COUNT(*) AS total_sessions, COALESCE(SUM(duration_minutes),0) AS total_minutes FROM connector_sessions ${where}`,
