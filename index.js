@@ -872,13 +872,10 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
 // --- Endpoint para reconstruir tabla connector_sessions desde charger_monitoring (ONE-TIME) ---
 app.post('/api/rebuild-connector-sessions', async (req, res) => {
   try {
-    // 1. Borrar todas las sesiones actuales
     await pool.query('DELETE FROM connector_sessions');
-    // 2. Obtener todos los eventos de cargadores rápidos
     const { rows: events } = await pool.query(
       `SELECT * FROM charger_monitoring WHERE power >= 60 ORDER BY charger_name, connector_id, timestamp`
     );
-    // 3. Reconstruir sesiones
     let lastSession = {}; // key = charger_name + connector_id
     let sessionsToInsert = [];
     for (const event of events) {
@@ -897,7 +894,22 @@ app.post('/api/rebuild-connector-sessions', async (req, res) => {
       } else {
         if (lastSession[key]) {
           const session_end = event.timestamp;
-          const duration_minutes = Math.round((new Date(session_end) - new Date(lastSession[key].session_start)) / 60000);
+          // Validación: timestamps válidos y duración positiva
+          const startMs = Number(lastSession[key].session_start);
+          const endMs = Number(session_end);
+          if (
+            isNaN(startMs) || isNaN(endMs) || !startMs || !endMs || endMs <= startMs
+          ) {
+            console.warn(`[REBUILD] Sesión ignorada por timestamps inválidos: ${JSON.stringify(lastSession[key])}, end: ${session_end}`);
+            lastSession[key] = null;
+            continue;
+          }
+          const duration_minutes = Math.round((endMs - startMs) / 60000);
+          if (!Number.isFinite(duration_minutes) || duration_minutes <= 0) {
+            console.warn(`[REBUILD] Sesión ignorada por duración inválida: ${JSON.stringify(lastSession[key])}, end: ${session_end}`);
+            lastSession[key] = null;
+            continue;
+          }
           sessionsToInsert.push({
             ...lastSession[key],
             session_end,
@@ -907,7 +919,6 @@ app.post('/api/rebuild-connector-sessions', async (req, res) => {
         }
       }
     }
-    // 4. Insertar sesiones reconstruidas
     let count = 0;
     for (const s of sessionsToInsert) {
       await pool.query(
