@@ -437,7 +437,7 @@ app.post('/api/clear-db', async (req, res) => {
 });
 
 // --- Endpoint para crear la tabla connector_sessions ---
-app.post('/api/create-sessions-table', async (req, res) => {
+app.post('/api/create-connector-sessions-table', async (req, res) => {
   const createTableSQL = `
     CREATE TABLE IF NOT EXISTS connector_sessions (
       id SERIAL PRIMARY KEY,
@@ -448,6 +448,7 @@ app.post('/api/create-sessions-table', async (req, res) => {
       session_start TIMESTAMP NOT NULL,
       session_end TIMESTAMP,
       duration_minutes INTEGER,
+      last_heartbeat TIMESTAMP,
       energy_kwh REAL,
       created_at TIMESTAMP DEFAULT NOW()
     );
@@ -867,3 +868,58 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
     }
   }
 }
+
+// --- Endpoint para reconstruir tabla connector_sessions desde charger_monitoring (ONE-TIME) ---
+app.post('/api/rebuild-connector-sessions', async (req, res) => {
+  try {
+    // 1. Borrar todas las sesiones actuales
+    await pool.query('DELETE FROM connector_sessions');
+    // 2. Obtener todos los eventos de cargadores rápidos
+    const { rows: events } = await pool.query(
+      `SELECT * FROM charger_monitoring WHERE power >= 60 ORDER BY charger_name, connector_id, timestamp`
+    );
+    // 3. Reconstruir sesiones
+    let lastSession = {}; // key = charger_name + connector_id
+    let sessionsToInsert = [];
+    for (const event of events) {
+      const key = `${event.charger_name}__${event.connector_id}`;
+      if (!lastSession[key]) lastSession[key] = null;
+      if (event.status === 'Charging') {
+        if (!lastSession[key]) {
+          lastSession[key] = {
+            charger_name: event.charger_name,
+            connector_id: event.connector_id,
+            connector_type: event.connector_type,
+            power: event.power,
+            session_start: event.timestamp,
+          };
+        }
+      } else {
+        if (lastSession[key]) {
+          const session_end = event.timestamp;
+          const duration_minutes = Math.round((new Date(session_end) - new Date(lastSession[key].session_start)) / 60000);
+          sessionsToInsert.push({
+            ...lastSession[key],
+            session_end,
+            duration_minutes
+          });
+          lastSession[key] = null;
+        }
+      }
+    }
+    // 4. Insertar sesiones reconstruidas
+    let count = 0;
+    for (const s of sessionsToInsert) {
+      await pool.query(
+        `INSERT INTO connector_sessions (charger_name, connector_id, connector_type, power, session_start, session_end, duration_minutes, last_heartbeat)
+         VALUES ($1, $2, $3, $4, to_timestamp($5 / 1000.0), to_timestamp($6 / 1000.0), $7, to_timestamp($6 / 1000.0))`,
+        [s.charger_name, s.connector_id, s.connector_type, s.power, s.session_start, s.session_end, s.duration_minutes]
+      );
+      count++;
+    }
+    res.json({ ok: true, message: `Reconstrucción completada: ${count} sesiones insertadas.` });
+  } catch (err) {
+    console.error('Error reconstruyendo connector_sessions:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
