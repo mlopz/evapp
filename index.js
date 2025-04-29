@@ -63,6 +63,8 @@ function updateConnectorsState(newChargers) {
     if (!connectorsState[chargerName]) connectorsState[chargerName] = {};
     (charger.connectors || []).forEach((connector, connectorIndex) => {
       const connectorId = connector.connectorId || `${chargerName}-${connector.type}-${connectorIndex}`;
+      // IGNORAR CARGADORES LENTOS
+      if (!shouldProcessConnector(connectorId)) return;
       if (!connectorsState[chargerName][connectorId]) {
         connectorsState[chargerName][connectorId] = {
           state: connector.status,
@@ -113,7 +115,7 @@ function updateConnectorsState(newChargers) {
           power: connector.power || null,
           status: 'Charging',
           timestamp: now
-        }).catch(err => console.error('Error guardando sesión en PostgreSQL:', err));
+        }).catch(err => console.error('Error guardando evento Charging:', err));
       }
       // --- NUEVO: Cierre defensivo ante cambio de estado ---
       if (
@@ -783,22 +785,33 @@ app.listen(PORT, () => {
   console.log(`Servidor backend escuchando en puerto ${PORT}`);
 });
 
-// --- Filtrar conectores lentos en inserciones y guardar sesión en connector_sessions ---
-async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp }) {
-  console.log('[insertMonitoringRecordSafe] llamado con:', { charger_name, connector_type, connector_id, power, status, timestamp });
-  if (typeof power === 'string') power = parseFloat(power);
-  if (power < 60) {
-    console.log('[insertMonitoringRecordSafe] Potencia menor a 60, no se guarda.');
-    return Promise.resolve(); // No guardar eventos de conectores lentos
-  }
-  // Guardar en charger_monitoring como log histórico
-  await insertMonitoringRecord({ charger_name, connector_type, connector_id, power, status, timestamp });
+// --- CARGA DE CARGADORES RAPIDOS ---
+const fs = require('fs');
+let fastConnectorIds = new Set();
+try {
+  const fastChargersRaw = fs.readFileSync('./fast_chargers.json', 'utf-8');
+  const fastChargersArr = JSON.parse(fastChargersRaw);
+  fastConnectorIds = new Set(fastChargersArr);
+  console.log(`[FAST CHARGERS] Cargados ${fastConnectorIds.size} connectors rápidos.`);
+} catch (err) {
+  console.error('[FAST CHARGERS] Error al cargar fast_chargers.json:', err);
+}
 
+function shouldProcessConnector(connectorId) {
+  return fastConnectorIds.has(connectorId);
+}
+
+// --- MODIFICAR insertMonitoringRecordSafe PARA ACTUALIZAR HEARTBEAT SI YA EXISTE SESION ACTIVA ---
+async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp }) {
+  // FILTRO: ignorar si no es rápido
+  if (!shouldProcessConnector(connector_id)) return;
+  if (typeof power === 'string') power = parseFloat(power);
+  // Guardar en charger_monitoring como log histórico SOLO si es rápido
+  await insertMonitoringRecord({ charger_name, connector_type, connector_id, power, status, timestamp });
   // --- Nueva lógica: guardar o actualizar sesión en connector_sessions ---
   if (status === 'Charging') {
-    // Solo crear sesión si no existe activa
     const { rows: existing } = await pool.query(
-      `SELECT 1 FROM connector_sessions WHERE charger_name = $1 AND connector_id = $2 AND session_end IS NULL`,
+      `SELECT id FROM connector_sessions WHERE charger_name = $1 AND connector_id = $2 AND session_end IS NULL`,
       [charger_name, connector_id]
     );
     if (existing.length === 0) {
@@ -813,10 +826,18 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
         console.error('[insertMonitoringRecordSafe] Error al insertar sesión:', err);
       }
     } else {
-      console.log('[insertMonitoringRecordSafe] Ya existe sesión activa, no se inserta.');
+      // ACTUALIZAR HEARTBEAT DE LA SESION ACTIVA
+      try {
+        await pool.query(
+          `UPDATE connector_sessions SET last_heartbeat = to_timestamp($1 / 1000.0) WHERE id = $2`,
+          [timestamp, existing[0].id]
+        );
+        //console.log('[insertMonitoringRecordSafe] Heartbeat actualizado para sesión activa');
+      } catch (err) {
+        console.error('[insertMonitoringRecordSafe] Error al actualizar heartbeat:', err);
+      }
     }
   } else if (status === 'SessionEnded') {
-    // Intentar cerrar sesión activa
     const res = await pool.query(
       `UPDATE connector_sessions
        SET session_end = to_timestamp($1 / 1000.0),
@@ -827,7 +848,7 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
     );
     if (res.rowCount === 0) {
       console.warn('[insertMonitoringRecordSafe] No se encontró sesión activa para cerrar.');
-      return; // No continuar si no hay sesión activa
+      return;
     }
     if (!res.rows[0] || !res.rows[0].session_start) {
       console.warn('[insertMonitoringRecordSafe] Sesión cerrada pero sin session_start definido.');
@@ -836,7 +857,6 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
     let rawDuration = Math.round((new Date(timestamp) - new Date(res.rows[0].session_start).getTime()) / 60000);
     let duration = normalizeSessionDuration(rawDuration);
     if (duration === null) {
-      // Eliminar sesión si ya existe
       await pool.query('DELETE FROM connector_sessions WHERE id = $1', [res.rows[0].id]);
       console.log(`[AUTO-CLEAN] Sesión id ${res.rows[0].id} eliminada por ser < 5 min.`);
     } else {
