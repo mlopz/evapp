@@ -796,6 +796,34 @@ app.get('/api/sessions/stats', async (req, res) => {
   }
 });
 
+app.get('/api/fast-chargers/status', async (req, res) => {
+  try {
+    // Leer los IDs de fast chargers
+    const fastChargersArr = Array.from(fastConnectorIds);
+    // Suponiendo que chargersData está actualizado en memoria
+    // Mapear todos los cargadores y conectores filtrando solo los rápidos
+    const result = [];
+    for (const charger of chargersData) {
+      for (const conn of (charger.connectors || [])) {
+        const connectorId = conn.connectorId || `${charger.name}-${conn.type}-${conn.index || 0}`;
+        if (fastConnectorIds.has(connectorId)) {
+          result.push({
+            connector_id: connectorId,
+            charger_name: charger.name,
+            estado: conn.status || (connectorsState[charger.name]?.[connectorId]?.state) || 'Desconocido',
+            power: conn.power,
+            connector_type: conn.type
+          });
+        }
+      }
+    }
+    res.json({ chargers: result });
+  } catch (err) {
+    console.error('[fast-chargers/status] Error:', err);
+    res.status(500).json({ error: 'Error obteniendo estado de cargadores rápidos' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Servidor backend escuchando en puerto ${PORT}`);
 });
