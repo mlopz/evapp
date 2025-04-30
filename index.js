@@ -610,6 +610,20 @@ app.get('/api/connector-sessions/summary', async (req, res) => {
   }
 });
 
+// --- Endpoint resumen de connector_sessions ---
+app.get('/api/connector-sessions/summary', async (req, res) => {
+  try {
+    const { rows: countRows } = await pool.query('SELECT COUNT(*)::int AS total FROM connector_sessions');
+    const { rows: sampleRows } = await pool.query('SELECT * FROM connector_sessions ORDER BY session_start DESC LIMIT 5');
+    res.json({
+      total: countRows[0]?.total || 0,
+      samples: sampleRows
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- Exportar sesiones de conectores en CSV ---
 app.get('/api/connector-sessions/export', async (req, res) => {
   try {
@@ -894,21 +908,34 @@ app.post('/api/rebuild-connector-sessions', async (req, res) => {
       } else {
         if (lastSession[key]) {
           const session_end = event.timestamp;
-          // Validación: timestamps válidos y duración positiva
-          const startMs = Number(lastSession[key].session_start);
-          const endMs = Number(session_end);
+          // --- Validación robusta de timestamps ---
+          let startMs = Number(lastSession[key].session_start);
+          let endMs = Number(session_end);
+          // Si son strings, intentar parsear como fecha
+          if (isNaN(startMs) && typeof lastSession[key].session_start === 'string') {
+            startMs = Date.parse(lastSession[key].session_start);
+          }
+          if (isNaN(endMs) && typeof session_end === 'string') {
+            endMs = Date.parse(session_end);
+          }
           if (
             isNaN(startMs) || isNaN(endMs) || !startMs || !endMs || endMs <= startMs
           ) {
-            console.warn(`[REBUILD] Sesión ignorada por timestamps inválidos: ${JSON.stringify(lastSession[key])}, end: ${session_end}`);
+            console.warn(`[REBUILD] Sesión ignorada por timestamps inválidos: start=${lastSession[key].session_start}, end=${session_end}`);
             lastSession[key] = null;
             continue;
           }
-          const duration_minutes = Math.round((endMs - startMs) / 60000);
-          if (!Number.isFinite(duration_minutes) || duration_minutes <= 0) {
-            console.warn(`[REBUILD] Sesión ignorada por duración inválida: ${JSON.stringify(lastSession[key])}, end: ${session_end}`);
+          let duration_minutes = Math.round((endMs - startMs) / 60000);
+          // --- Nueva regla: descartar sesiones cortas ---
+          if (duration_minutes < 5) {
+            console.warn(`[REBUILD] Sesión eliminada por ser menor a 5 minutos: duración=${duration_minutes}, startMs=${startMs}, endMs=${endMs}`);
             lastSession[key] = null;
             continue;
+          }
+          // --- Lógica: limitar sesiones largas ---
+          if (duration_minutes > 90) {
+            console.warn(`[REBUILD] Sesión con duración ${duration_minutes} min forzada a 70 min: startMs=${startMs}, endMs=${endMs}`);
+            duration_minutes = 70;
           }
           sessionsToInsert.push({
             ...lastSession[key],
