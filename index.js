@@ -217,84 +217,84 @@ async function pollChargers() {
 }
 
 // --- Cierre automático de sesiones por inactividad de la API ---
-setInterval(() => {
-  const now = Date.now();
-  // Si la última actualización fue hace más de 2 minutos
-  if (lastPollTimestamp && now - lastPollTimestamp > 2 * 60 * 1000) {
-    console.warn('[INACTIVIDAD API] Cerrando todas las sesiones de carga activas por falta de datos');
-    for (const chargerName in connectorsState) {
-      for (const connectorId in connectorsState[chargerName]) {
-        const state = connectorsState[chargerName][connectorId];
-        if (state.state === 'Charging' && state.sessionStart) {
-          insertMonitoringRecordSafe({
-            charger_name: chargerName,
-            connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId).type,
-            connector_id: connectorId,
-            power: null,
-            status: 'SessionEnded',
-            timestamp: now
-          }).catch(err => console.error('Error cerrando sesión por inactividad:', err));
-          state.sessionStart = null;
-          state.state = 'Available';
-        }
-      }
-    }
-  }
-}, 30 * 1000);
+// setInterval(() => {
+//   const now = Date.now();
+//   // Si la última actualización fue hace más de 2 minutos
+//   if (lastPollTimestamp && now - lastPollTimestamp > 2 * 60 * 1000) {
+//     console.warn('[INACTIVIDAD API] Cerrando todas las sesiones de carga activas por falta de datos');
+//     for (const chargerName in connectorsState) {
+//       for (const connectorId in connectorsState[chargerName]) {
+//         const state = connectorsState[chargerName][connectorId];
+//         if (state.state === 'Charging' && state.sessionStart) {
+//           insertMonitoringRecordSafe({
+//             charger_name: chargerName,
+//             connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId).type,
+//             connector_id: connectorId,
+//             power: null,
+//             status: 'SessionEnded',
+//             timestamp: now
+//           }).catch(err => console.error('Error cerrando sesión por inactividad:', err));
+//           state.sessionStart = null;
+//           state.state = 'Available';
+//         }
+//       }
+//     }
+//   }
+// }, 30 * 1000);
 
 // --- Cierre automático de sesiones por timeout o inactividad ---
-setInterval(async () => {
-  try {
-    // 2 horas en minutos
-    const MAX_SESSION_MINUTES = 120;
-    // 5 minutos de inactividad
-    const MAX_INACTIVITY_MINUTES = 5;
-    const now = new Date();
-    // Buscar sesiones activas
-    const { rows: activeSessions } = await pool.query(
-      `SELECT id, charger_name, connector_id, session_start, last_heartbeat, EXTRACT(EPOCH FROM (NOW() - session_start))/60 AS elapsed_minutes, EXTRACT(EPOCH FROM (NOW() - last_heartbeat))/60 AS inactivity_minutes
-       FROM connector_sessions WHERE session_end IS NULL`
-    );
-    for (const s of activeSessions) {
-      // Cierre por timeout total
-      if (s.elapsed_minutes > MAX_SESSION_MINUTES) {
-        let rawDuration = Math.round((Date.now() - new Date(s.session_start).getTime()) / 60000);
-        let duration = normalizeSessionDuration(rawDuration);
-        if (duration === null) {
-          // Eliminar sesión si ya existe
-          await pool.query('DELETE FROM connector_sessions WHERE id = $1', [s.id]);
-          console.log(`[AUTO-CLEAN] Sesión id ${s.id} eliminada por ser < 5 min.`);
-          continue;
-        }
-        await pool.query(
-          `UPDATE connector_sessions SET session_end = NOW(), duration_minutes = $1, quality = 'SESSION_TIMEOUT' WHERE id = $2`,
-          [duration, s.id]
-        );
-        console.log(`[AUTO-CLOSE] Sesión id ${s.id} cerrada por duración > ${MAX_SESSION_MINUTES} min.`);
-        continue;
-      }
-      // Cierre por inactividad
-      if (s.last_heartbeat && s.inactivity_minutes > MAX_INACTIVITY_MINUTES) {
-        let rawDuration = Math.round((Date.now() - new Date(s.session_start).getTime()) / 60000);
-        let duration = normalizeSessionDuration(rawDuration);
-        if (duration === null) {
-          // Eliminar sesión si ya existe
-          await pool.query('DELETE FROM connector_sessions WHERE id = $1', [s.id]);
-          console.log(`[AUTO-CLEAN] Sesión id ${s.id} eliminada por ser < 5 min.`);
-          continue;
-        }
-        await pool.query(
-          `UPDATE connector_sessions SET session_end = NOW(), duration_minutes = $1, quality = 'INACTIVITY_TIMEOUT' WHERE id = $2`,
-          [duration, s.id]
-        );
-        console.log(`[AUTO-CLOSE] Sesión id ${s.id} cerrada por inactividad > ${MAX_INACTIVITY_MINUTES} min.`);
-        continue;
-      }
-    }
-  } catch (err) {
-    console.error('[AUTO-CLOSE] Error al cerrar sesiones automáticas:', err);
-  }
-}, 60 * 1000); // Ejecuta cada minuto
+// setInterval(async () => {
+//   try {
+//     // 2 horas en minutos
+//     const MAX_SESSION_MINUTES = 120;
+//     // 5 minutos de inactividad
+//     const MAX_INACTIVITY_MINUTES = 5;
+//     const now = new Date();
+//     // Buscar sesiones activas
+//     const { rows: activeSessions } = await pool.query(
+//       `SELECT id, charger_name, connector_id, session_start, last_heartbeat, EXTRACT(EPOCH FROM (NOW() - session_start))/60 AS elapsed_minutes, EXTRACT(EPOCH FROM (NOW() - last_heartbeat))/60 AS inactivity_minutes
+//        FROM connector_sessions WHERE session_end IS NULL`
+//     );
+//     for (const s of activeSessions) {
+//       // Cierre por timeout total
+//       if (s.elapsed_minutes > MAX_SESSION_MINUTES) {
+//         let rawDuration = Math.round((Date.now() - new Date(s.session_start).getTime()) / 60000);
+//         let duration = normalizeSessionDuration(rawDuration);
+//         if (duration === null) {
+//           // Eliminar sesión si ya existe
+//           await pool.query('DELETE FROM connector_sessions WHERE id = $1', [s.id]);
+//           console.log(`[AUTO-CLEAN] Sesión id ${s.id} eliminada por ser < 5 min.`);
+//           continue;
+//         }
+//         await pool.query(
+//           `UPDATE connector_sessions SET session_end = NOW(), duration_minutes = $1, quality = 'SESSION_TIMEOUT' WHERE id = $2`,
+//           [duration, s.id]
+//         );
+//         console.log(`[AUTO-CLOSE] Sesión id ${s.id} cerrada por duración > ${MAX_SESSION_MINUTES} min.`);
+//         continue;
+//       }
+//       // Cierre por inactividad
+//       if (s.last_heartbeat && s.inactivity_minutes > MAX_INACTIVITY_MINUTES) {
+//         let rawDuration = Math.round((Date.now() - new Date(s.session_start).getTime()) / 60000);
+//         let duration = normalizeSessionDuration(rawDuration);
+//         if (duration === null) {
+//           // Eliminar sesión si ya existe
+//           await pool.query('DELETE FROM connector_sessions WHERE id = $1', [s.id]);
+//           console.log(`[AUTO-CLEAN] Sesión id ${s.id} eliminada por ser < 5 min.`);
+//           continue;
+//         }
+//         await pool.query(
+//           `UPDATE connector_sessions SET session_end = NOW(), duration_minutes = $1, quality = 'INACTIVITY_TIMEOUT' WHERE id = $2`,
+//           [duration, s.id]
+//         );
+//         console.log(`[AUTO-CLOSE] Sesión id ${s.id} cerrada por inactividad > ${MAX_INACTIVITY_MINUTES} min.`);
+//         continue;
+//       }
+//     }
+//   } catch (err) {
+//     console.error('[AUTO-CLOSE] Error al cerrar sesiones automáticas:', err);
+//   }
+// }, 60 * 1000); // Ejecuta cada minuto
 
 // --- Utilidad para normalizar duración según política ---
 function normalizeSessionDuration(duration) {
@@ -863,63 +863,46 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
   if (typeof power === 'string') power = parseFloat(power);
   // Guardar en charger_monitoring como log histórico SOLO si es rápido
   await insertMonitoringRecord({ charger_name, connector_type, connector_id, power, status, timestamp });
-  // --- Nueva lógica: guardar o actualizar sesión en connector_sessions ---
+
+  // Solo registrar sesión cuando status es 'SessionEnded'
+  if (status === 'SessionEnded') {
+    // Buscar sesión activa
+    const res = await pool.query(
+      `SELECT id, session_start FROM connector_sessions WHERE charger_name = $1 AND connector_id = $2 AND session_end IS NULL ORDER BY session_start DESC LIMIT 1`,
+      [charger_name, connector_id]
+    );
+    if (res.rows.length === 0) return;
+    let session_start = res.rows[0].session_start;
+    let session_end = new Date(timestamp);
+    let duration_minutes = Math.round((session_end - new Date(session_start)) / 60000);
+    // Si la duración es mayor a 90 minutos, guardar como 70
+    if (duration_minutes > 90) duration_minutes = 70;
+    // Si la duración es menor a 5 minutos, eliminar la sesión
+    if (duration_minutes < 5) {
+      await pool.query('DELETE FROM connector_sessions WHERE id = $1', [res.rows[0].id]);
+      console.log(`[AUTO-CLEAN] Sesión id ${res.rows[0].id} eliminada por ser < 5 min.`);
+      return;
+    }
+    await pool.query(
+      `UPDATE connector_sessions SET session_end = $1, duration_minutes = $2, quality = NULL WHERE id = $3`,
+      [session_end, duration_minutes, res.rows[0].id]
+    );
+    return;
+  }
+  // Si es 'Charging', crear nueva sesión solo si no existe una activa
   if (status === 'Charging') {
-    const { rows: existing } = await pool.query(
+    const res = await pool.query(
       `SELECT id FROM connector_sessions WHERE charger_name = $1 AND connector_id = $2 AND session_end IS NULL`,
       [charger_name, connector_id]
     );
-    if (existing.length === 0) {
-      try {
-        await pool.query(
-          `INSERT INTO connector_sessions (charger_name, connector_id, connector_type, power, session_start, last_heartbeat)
-           VALUES ($1, $2, $3, $4, to_timestamp($5 / 1000.0), to_timestamp($5 / 1000.0))`,
-          [charger_name, connector_id, connector_type, power, timestamp]
-        );
-        console.log('[insertMonitoringRecordSafe] INSERT exitoso');
-      } catch (err) {
-        console.error('[insertMonitoringRecordSafe] Error al insertar sesión:', err);
-      }
-    } else {
-      // ACTUALIZAR HEARTBEAT DE LA SESION ACTIVA
-      try {
-        await pool.query(
-          `UPDATE connector_sessions SET last_heartbeat = to_timestamp($1 / 1000.0) WHERE id = $2`,
-          [timestamp, existing[0].id]
-        );
-        //console.log('[insertMonitoringRecordSafe] Heartbeat actualizado para sesión activa');
-      } catch (err) {
-        console.error('[insertMonitoringRecordSafe] Error al actualizar heartbeat:', err);
-      }
-    }
-  } else if (status === 'SessionEnded') {
-    const res = await pool.query(
-      `UPDATE connector_sessions
-       SET session_end = to_timestamp($1 / 1000.0),
-           duration_minutes = ROUND(EXTRACT(EPOCH FROM (to_timestamp($1 / 1000.0) - session_start)) / 60)
-       WHERE charger_name = $2 AND connector_id = $3 AND session_end IS NULL
-       RETURNING *`,
-      [timestamp, charger_name, connector_id]
-    );
-    if (res.rowCount === 0) {
-      console.warn('[insertMonitoringRecordSafe] No se encontró sesión activa para cerrar.');
-      return;
-    }
-    if (!res.rows[0] || !res.rows[0].session_start) {
-      console.warn('[insertMonitoringRecordSafe] Sesión cerrada pero sin session_start definido.');
-      return;
-    }
-    let rawDuration = Math.round((new Date(timestamp) - new Date(res.rows[0].session_start).getTime()) / 60000);
-    let duration = normalizeSessionDuration(rawDuration);
-    if (duration === null) {
-      await pool.query('DELETE FROM connector_sessions WHERE id = $1', [res.rows[0].id]);
-      console.log(`[AUTO-CLEAN] Sesión id ${res.rows[0].id} eliminada por ser < 5 min.`);
-    } else {
+    if (res.rows.length === 0) {
       await pool.query(
-        `UPDATE connector_sessions SET duration_minutes = $1 WHERE id = $2`,
-        [duration, res.rows[0].id]
+        `INSERT INTO connector_sessions (charger_name, connector_id, connector_type, power, session_start)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [charger_name, connector_id, connector_type, power, new Date(timestamp)]
       );
     }
+    return;
   }
 }
 
