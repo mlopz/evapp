@@ -813,8 +813,8 @@ app.get('/api/fast-chargers/status', async (req, res) => {
             estado: conn.status || (connectorsState[charger.name]?.[connectorId]?.state) || 'Desconocido',
             power: conn.power,
             connector_type: conn.type,
-            lat: charger.lat || (charger.location && charger.location.lat) || null,
-            lon: charger.lon || (charger.location && charger.location.lon) || null
+            lat: charger.latitude || (charger.location && charger.location.latitude) || null,
+            lon: charger.longitude || (charger.location && charger.location.longitude) || null
           });
         }
       }
