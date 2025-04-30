@@ -824,6 +824,16 @@ app.get('/api/fast-chargers/status', async (req, res) => {
   }
 });
 
+// Endpoint temporal para debug: ver el contenido real de fast_chargers.json
+app.get('/api/debug/fast-chargers-json', (req, res) => {
+  try {
+    const fastChargers = require('./fast_chargers.json');
+    res.json(fastChargers);
+  } catch (e) {
+    res.status(500).json({ error: 'No se pudo leer el archivo fast_chargers.json', details: e.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Servidor backend escuchando en puerto ${PORT}`);
 });
