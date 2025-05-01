@@ -238,7 +238,7 @@ app.get('/api/chargers', (req, res) => {
 // --- ENDPOINT TEMPORAL: Listar sesiones para frontend ---
 app.get('/api/sessions', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM connector_sessions ORDER BY session_start DESC LIMIT 100');
+    const { rows } = await pool.query('SELECT * FROM connector_sessions ORDER BY session_start DESC');
     res.json({ sessions: rows });
   } catch (err) {
     res.status(500).json({ error: 'Error obteniendo sesiones' });

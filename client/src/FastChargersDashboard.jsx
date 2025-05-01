@@ -186,8 +186,8 @@ export default function FastChargersDashboard() {
                               <table className="min-w-full text-xs text-gray-700 border">
                                 <thead>
                                   <tr className="bg-orange-100">
-                                    <th className="py-2 px-3 font-semibold">Inicio</th>
-                                    <th className="py-2 px-3 font-semibold">Fin</th>
+                                    <th className="py-2 px-3 font-semibold">Inicio de sesión</th>
+                                    <th className="py-2 px-3 font-semibold">Fin de sesión</th>
                                     <th className="py-2 px-3 font-semibold">Duración</th>
                                     <th className="py-2 px-3 font-semibold">Estado</th>
                                   </tr>
@@ -195,8 +195,8 @@ export default function FastChargersDashboard() {
                                 <tbody>
                                   {sesiones.slice((paginaSesiones-1)*sesionesPorPagina, paginaSesiones*sesionesPorPagina).map((s, idx) => (
                                     <tr key={s.id || idx} className="border-b last:border-b-0">
-                                      <td className="py-2 px-3">{s.session_start ? new Date(s.session_start).toLocaleString() : '-'}</td>
-                                      <td className="py-2 px-3">{s.session_end ? new Date(s.session_end).toLocaleString() : '-'}</td>
+                                      <td className="py-2 px-3">{s.session_start ? new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(s.session_start)) : '-'}</td>
+                                      <td className="py-2 px-3">{s.session_end ? new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(s.session_end)) : '-'}</td>
                                       <td className="py-2 px-3">{s.duration_minutes != null ? `${s.duration_minutes} min` : '-'}</td>
                                       <td className="py-2 px-3">{s.quality || '-'}</td>
                                     </tr>
