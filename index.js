@@ -68,72 +68,16 @@ function updateConnectorsState(newChargers) {
       if (!connectorsState[chargerName][connectorId]) {
         connectorsState[chargerName][connectorId] = {
           state: connector.status,
-          lastState: connector.status,
+          lastState: null,
           lastUpdate: now,
           accumulatedMinutes: 0,
-          sessionStart: null,
           accumulatedMinutesDisplay: 0,
+          sessionStart: null
         };
       }
       const prev = connectorsState[chargerName][connectorId];
       const newState = connector.status;
-      // --- ACTUALIZACIÓN DE MINUTOS ACUMULADOS ---
-      // Si termina una sesión, sumar su duración al acumulado
-      if (prev.state === 'Charging' && newState !== 'Charging' && prev.sessionStart) {
-        const sessionEnd = now;
-        const duration = minutesBetween(prev.sessionStart, sessionEnd);
-        prev.accumulatedMinutes = (prev.accumulatedMinutes || 0) + duration;
-        const sessionObj = {
-          chargerName,
-          connectorId,
-          connectorType: connector.type,
-          start: prev.sessionStart,
-          end: sessionEnd,
-          durationMinutes: duration,
-          power: connector.power || null,
-        };
-        sessions.push(sessionObj);
-        // Guardar en PostgreSQL SOLO si power >= 60
-        insertMonitoringRecordSafe({
-          charger_name: chargerName,
-          connector_type: connector.type,
-          connector_id: connectorId,
-          power: connector.power || null,
-          status: 'SessionEnded',
-          timestamp: sessionEnd
-        }).catch(err => console.error('Error guardando sesión en PostgreSQL:', err));
-        prev.sessionStart = null;
-      }
-      // Si inicia una sesión, no modificar el acumulado
-      if (!prev.sessionStart && newState === 'Charging') {
-        prev.sessionStart = now;
-        // Insertar evento Charging SOLO si power >= 60
-        insertMonitoringRecordSafe({
-          charger_name: chargerName,
-          connector_type: connector.type,
-          connector_id: connectorId,
-          power: connector.power || null,
-          status: 'Charging',
-          timestamp: now
-        }).catch(err => console.error('Error guardando evento Charging:', err));
-      }
-      // --- NUEVO: Cierre defensivo ante cambio de estado ---
-      if (
-        prev.state === 'Charging' &&
-        (newState === 'Available' || newState === 'Unavailable')
-      ) {
-        // Cerrar sesión activa en la base si existe
-        pool.query(
-          `UPDATE connector_sessions SET session_end = NOW(), duration_minutes = ROUND(EXTRACT(EPOCH FROM (NOW() - session_start))/60), quality = 'FORCED_CLOSE' WHERE charger_name = $1 AND connector_id = $2 AND session_end IS NULL`,
-          [chargerName, connectorId]
-        ).then(result => {
-          if (result.rowCount > 0) {
-            console.log(`[DEFENSIVE CLOSE] Sesión forzada cerrada para ${chargerName} - ${connectorId}`);
-          }
-        }).catch(err => {
-          console.error('[DEFENSIVE CLOSE] Error cerrando sesión forzada:', err);
-        });
-      }
+      // SOLO lógica de registro real, SIN cierre automático
       prev.lastState = prev.state;
       prev.state = newState;
       prev.lastUpdate = now;
@@ -214,93 +158,6 @@ async function pollChargers() {
   } catch (err) {
     console.error('Error consultando la API pública:', err);
   }
-}
-
-// --- Cierre automático de sesiones por inactividad de la API ---
-// setInterval(() => {
-//   const now = Date.now();
-//   // Si la última actualización fue hace más de 2 minutos
-//   if (lastPollTimestamp && now - lastPollTimestamp > 2 * 60 * 1000) {
-//     console.warn('[INACTIVIDAD API] Cerrando todas las sesiones de carga activas por falta de datos');
-//     for (const chargerName in connectorsState) {
-//       for (const connectorId in connectorsState[chargerName]) {
-//         const state = connectorsState[chargerName][connectorId];
-//         if (state.state === 'Charging' && state.sessionStart) {
-//           insertMonitoringRecordSafe({
-//             charger_name: chargerName,
-//             connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId).type,
-//             connector_id: connectorId,
-//             power: null,
-//             status: 'SessionEnded',
-//             timestamp: now
-//           }).catch(err => console.error('Error cerrando sesión por inactividad:', err));
-//           state.sessionStart = null;
-//           state.state = 'Available';
-//         }
-//       }
-//     }
-//   }
-// }, 30 * 1000);
-
-// --- Cierre automático de sesiones por timeout o inactividad ---
-// setInterval(async () => {
-//   try {
-//     // 2 horas en minutos
-//     const MAX_SESSION_MINUTES = 120;
-//     // 5 minutos de inactividad
-//     const MAX_INACTIVITY_MINUTES = 5;
-//     const now = new Date();
-//     // Buscar sesiones activas
-//     const { rows: activeSessions } = await pool.query(
-//       `SELECT id, charger_name, connector_id, session_start, last_heartbeat, EXTRACT(EPOCH FROM (NOW() - session_start))/60 AS elapsed_minutes, EXTRACT(EPOCH FROM (NOW() - last_heartbeat))/60 AS inactivity_minutes
-//        FROM connector_sessions WHERE session_end IS NULL`
-//     );
-//     for (const s of activeSessions) {
-//       // Cierre por timeout total
-//       if (s.elapsed_minutes > MAX_SESSION_MINUTES) {
-//         let rawDuration = Math.round((Date.now() - new Date(s.session_start).getTime()) / 60000);
-//         let duration = normalizeSessionDuration(rawDuration);
-//         if (duration === null) {
-//           // Eliminar sesión si ya existe
-//           await pool.query('DELETE FROM connector_sessions WHERE id = $1', [s.id]);
-//           console.log(`[AUTO-CLEAN] Sesión id ${s.id} eliminada por ser < 5 min.`);
-//           continue;
-//         }
-//         await pool.query(
-//           `UPDATE connector_sessions SET session_end = NOW(), duration_minutes = $1, quality = 'SESSION_TIMEOUT' WHERE id = $2`,
-//           [duration, s.id]
-//         );
-//         console.log(`[AUTO-CLOSE] Sesión id ${s.id} cerrada por duración > ${MAX_SESSION_MINUTES} min.`);
-//         continue;
-//       }
-//       // Cierre por inactividad
-//       if (s.last_heartbeat && s.inactivity_minutes > MAX_INACTIVITY_MINUTES) {
-//         let rawDuration = Math.round((Date.now() - new Date(s.session_start).getTime()) / 60000);
-//         let duration = normalizeSessionDuration(rawDuration);
-//         if (duration === null) {
-//           // Eliminar sesión si ya existe
-//           await pool.query('DELETE FROM connector_sessions WHERE id = $1', [s.id]);
-//           console.log(`[AUTO-CLEAN] Sesión id ${s.id} eliminada por ser < 5 min.`);
-//           continue;
-//         }
-//         await pool.query(
-//           `UPDATE connector_sessions SET session_end = NOW(), duration_minutes = $1, quality = 'INACTIVITY_TIMEOUT' WHERE id = $2`,
-//           [duration, s.id]
-//         );
-//         console.log(`[AUTO-CLOSE] Sesión id ${s.id} cerrada por inactividad > ${MAX_INACTIVITY_MINUTES} min.`);
-//         continue;
-//       }
-//     }
-//   } catch (err) {
-//     console.error('[AUTO-CLOSE] Error al cerrar sesiones automáticas:', err);
-//   }
-// }, 60 * 1000); // Ejecuta cada minuto
-
-// --- Utilidad para normalizar duración según política ---
-function normalizeSessionDuration(duration) {
-  if (duration > 100) return 60;
-  if (duration < 5) return null; // Indica que debe eliminarse/no guardarse
-  return duration;
 }
 
 // --- Al iniciar el backend: sincronizar estado antes de cerrar/abrir sesiones ---
@@ -694,56 +551,7 @@ app.post('/api/heartbeat', async (req, res) => {
 });
 
 // --- Endpoint temporal para depurar y etiquetar sesiones ---
-app.post('/api/sessions/cleanup', async (req, res) => {
-  try {
-    // 1. Agregar columnas si no existen
-    await pool.query(`ALTER TABLE connector_sessions
-      ADD COLUMN IF NOT EXISTS last_heartbeat TIMESTAMP NULL DEFAULT NULL,
-      ADD COLUMN IF NOT EXISTS quality VARCHAR(20) NULL DEFAULT NULL;`);
-
-    // 2. Cerrar sesiones abiertas
-    const closeOpen = await pool.query(`UPDATE connector_sessions
-      SET session_end = NOW(),
-          duration_minutes = ROUND(EXTRACT(EPOCH FROM (NOW() - session_start)) / 60),
-          quality = COALESCE(quality, 'FORCED_CLOSE')
-      WHERE session_end IS NULL
-      RETURNING id;`);
-
-    // 3. Corregir sesiones demasiado largas (8h < dur <= 24h)
-    const tooLong = await pool.query(`UPDATE connector_sessions
-      SET quality = 'TOO_LONG'
-      WHERE duration_minutes > 480 AND duration_minutes <= 1440
-      RETURNING id;`);
-
-    // 4. Invalidar sesiones absurdas (negativas, cero, o >24h)
-    const invalid = await pool.query(`UPDATE connector_sessions
-      SET quality = 'INVALID'
-      WHERE duration_minutes <= 0 OR duration_minutes > 1440
-      RETURNING id;`);
-
-    // 5. Etiquetar sesiones normales
-    const ok = await pool.query(`UPDATE connector_sessions
-      SET quality = 'OK'
-      WHERE duration_minutes > 0 AND duration_minutes <= 480
-      RETURNING id;`);
-
-    // Eliminar sesiones cortas
-    await pool.query('DELETE FROM connector_sessions WHERE duration_minutes < 5');
-    // Actualizar sesiones largas
-    await pool.query('UPDATE connector_sessions SET duration_minutes = 60 WHERE duration_minutes > 100');
-
-    res.json({
-      ok: true,
-      closed_open_sessions: closeOpen.rowCount,
-      too_long: tooLong.rowCount,
-      invalid: invalid.rowCount,
-      ok_quality: ok.rowCount
-    });
-  } catch (err) {
-    console.error('[sessions/cleanup] Error:', err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
+// (ELIMINADO COMPLETAMENTE)
 
 // --- ENDPOINT: Estadísticas globales de sesiones (solo conectores activos: power >= 60) ---
 app.get('/api/sessions/stats', async (req, res) => {
