@@ -17,10 +17,22 @@ const pool = new Pool({
       `SELECT * FROM charger_monitoring ORDER BY charger_name, connector_id, timestamp`
     );
 
+    // --- Limpiar logs previos de debug ---
+    await pool.query('DELETE FROM rebuild_debug_logs');
+
+    // Función auxiliar para loguear en la tabla
+    async function logDebug(msg) {
+      await pool.query('INSERT INTO rebuild_debug_logs (log) VALUES ($1)', [msg]);
+    }
+
     // --- DEBUG: Mostrar cantidad y timestamp máximo de eventos ---
-    console.log(`[REBUILD-DEBUG] Cantidad de eventos en charger_monitoring: ${events.length}`);
+    const debugCount = `[REBUILD-DEBUG] Cantidad de eventos en charger_monitoring: ${events.length}`;
+    console.log(debugCount);
+    await logDebug(debugCount);
     if (events.length > 0) {
-      console.log(`[REBUILD-DEBUG] Timestamp evento más reciente: ${events[events.length-1].timestamp}`);
+      const debugTs = `[REBUILD-DEBUG] Timestamp evento más reciente: ${events[events.length-1].timestamp}`;
+      console.log(debugTs);
+      await logDebug(debugTs);
     }
 
     // 3. Reconstruir sesiones con lógica robusta (idéntica a migrate_sessions.js)
