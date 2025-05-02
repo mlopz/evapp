@@ -809,3 +809,20 @@ module.exports = {
   insertMonitoringRecordSafe,
   initBackendProtection
 };
+
+// --- ENDPOINT PARA OBTENER SESIONES FILTRADAS POR FECHA ---
+app.get('/api/connector-sessions', async (req, res) => {
+  const { from, to } = req.query;
+  if (!from || !to) {
+    return res.status(400).json({ error: 'Parámetros from y to requeridos' });
+  }
+  try {
+    const { rows } = await pool.query(
+      'SELECT * FROM connector_sessions WHERE session_start >= $1 AND session_end <= $2 ORDER BY session_start ASC',
+      [from, to]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.toString() });
+  }
+});

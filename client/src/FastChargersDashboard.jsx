@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { MapaZonasInfluencia, MapaVolumenUso } from './MapasCargadores';
+import Rentabilidad from './Rentabilidad';
 
 const ESTADOS = [
   { key: 'Disponible', label: 'Disponible', color: 'from-orange-400 to-orange-500', icon: (
@@ -532,9 +533,9 @@ export default function FastChargersDashboard() {
         </div>
       )}
 
-      {/* Sección Rentabilidad (pendiente de especificación) */}
+      {/* Sección Rentabilidad */}
       {tab==='rentabilidad' && (
-        <div className="bg-white rounded-xl shadow p-6 text-center text-orange-700 font-bold text-2xl">Próximamente: Rentabilidad</div>
+        <Rentabilidad fetchSesiones={fetchSesionesByDateRange} />
       )}
       {/* Footer discreto con incidentes backend */}
       <footer className="w-full text-xs text-gray-400 mt-8 flex justify-end">
@@ -564,4 +565,12 @@ function getVolumenesPorCargador(sesiones) {
     vol[s.connector_id] += s.duration_minutes || 0;
   });
   return vol;
+}
+
+// --- Añadir función para fetchSesionesByDateRange ---
+async function fetchSesionesByDateRange(from, to) {
+  // Ajusta el endpoint según tu backend real
+  const res = await fetch(`/api/connector-sessions?from=${from}&to=${to}`);
+  if (!res.ok) return [];
+  return await res.json();
 }
