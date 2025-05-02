@@ -449,7 +449,7 @@ export default function FastChargersDashboard() {
                           setPaginaSesiones(1);
                           setLoadingSesiones(true);
                           try {
-                            const res = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/sessions?connectorId=${encodeURIComponent(conn.connector_id)}`);
+                            const res = await fetch(`${process.env.REACT_APP_API_BASE || ''}/api/sessions?connectorId=${encodeURIComponent(conn.connector_id)}`);
                             const data = await res.json();
                             console.log('RESPUESTA CRUDA BACKEND /api/sessions:', data);
                             setSesiones(data.sessions || []);
@@ -568,9 +568,10 @@ function getVolumenesPorCargador(sesiones) {
 }
 
 // --- Añadir función para fetchSesionesByDateRange ---
+const API_BASE = process.env.REACT_APP_API_BASE || '';
 async function fetchSesionesByDateRange(from, to) {
-  // Ajusta el endpoint según tu backend real
-  const res = await fetch(`/api/connector-sessions?from=${from}&to=${to}`);
+  // Usa variable de entorno para producción
+  const res = await fetch(`${API_BASE}/api/connector-sessions?from=${from}&to=${to}`);
   if (!res.ok) return [];
   return await res.json();
 }
