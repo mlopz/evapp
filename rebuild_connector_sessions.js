@@ -17,6 +17,12 @@ const pool = new Pool({
       `SELECT * FROM charger_monitoring ORDER BY charger_name, connector_id, timestamp`
     );
 
+    // --- DEBUG: Mostrar cantidad y timestamp máximo de eventos ---
+    console.log(`[REBUILD-DEBUG] Cantidad de eventos en charger_monitoring: ${events.length}`);
+    if (events.length > 0) {
+      console.log(`[REBUILD-DEBUG] Timestamp evento más reciente: ${events[events.length-1].timestamp}`);
+    }
+
     // 3. Reconstruir sesiones con lógica robusta (idéntica a migrate_sessions.js)
     let lastSession = {}; // key = charger_name + connector_id
     let lastSessionEnd = {}; // para el cierre artificial
