@@ -80,9 +80,11 @@ const pool = new Pool({
     }
 
     // --- CIERRE DE SEGURIDAD: cerrar sesiones abiertas a los 70 minutos ---
+    console.log('Estado de lastSession antes de cierres artificiales:', lastSession);
     for (const key in lastSession) {
       const sesion = lastSession[key];
       if (sesion) {
+        console.log(`Cierre artificial para ${sesion.charger_name} - ${sesion.connector_id} desde ${sesion.session_start}`);
         const session_start = new Date(sesion.session_start);
         const session_end = new Date(session_start.getTime() + 70 * 60000); // +70 minutos
         sessionsToInsert.push({

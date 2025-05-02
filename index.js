@@ -644,9 +644,59 @@ app.get('/api/debug/fast-chargers-json', (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor backend escuchando en puerto ${PORT}`);
-});
+// --- INICIO: Protección ante reinicio del backend y registro de fallas ---
+const initBackendProtection = async () => {
+  try {
+    // 1. Buscar el último timestamp en charger_monitoring
+    const { rows: lastEventRows } = await pool.query('SELECT MAX(timestamp) as last_ts FROM charger_monitoring');
+    const lastTimestamp = lastEventRows[0]?.last_ts;
+    if (!lastTimestamp) {
+      console.log('No hay eventos en charger_monitoring. No se requiere cierre de sesiones.');
+      return;
+    }
+
+    // 2. Buscar sesiones abiertas
+    const { rows: openSessions } = await pool.query('SELECT * FROM connector_sessions WHERE session_end IS NULL');
+    if (openSessions.length > 0) {
+      for (const session of openSessions) {
+        await pool.query('UPDATE connector_sessions SET session_end = $1 WHERE id = $2', [lastTimestamp, session.id]);
+      }
+      console.log(`Cerradas ${openSessions.length} sesiones abiertas hasta ${lastTimestamp}`);
+    }
+
+    // 3. Registrar incidente de reinicio
+    await pool.query(
+      `CREATE TABLE IF NOT EXISTS backend_failures (
+        id SERIAL PRIMARY KEY,
+        timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        type VARCHAR(50) NOT NULL,
+        details TEXT
+      )`
+    );
+    await pool.query(
+      'INSERT INTO backend_failures (type, details) VALUES ($1, $2)',
+      ['BACKEND_RESTART', `Cerradas ${openSessions.length} sesiones abiertas hasta ${lastTimestamp}`]
+    );
+    console.log('Incidente de reinicio registrado en backend_failures.');
+  } catch (err) {
+    console.error('Error en la protección de backend:', err);
+    // Registrar el error como incidente
+    try {
+      await pool.query('INSERT INTO backend_failures (type, details) VALUES ($1, $2)', ['BACKEND_PROTECTION_ERROR', err.toString()]);
+    } catch (e2) {
+      console.error('Error registrando el incidente de protección:', e2);
+    }
+  }
+};
+
+// Llamar a la función de protección antes de iniciar el polling normal
+(async () => {
+  await initBackendProtection();
+  // ... aquí continúa el arranque normal del backend ...
+  app.listen(PORT, () => {
+    console.log(`Servidor backend escuchando en puerto ${PORT}`);
+  });
+})();
 
 // --- CARGA DE CARGADORES RAPIDOS ---
 const fs = require('fs');
