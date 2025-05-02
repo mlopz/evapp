@@ -8,8 +8,11 @@ const pool = new Pool({
 
 (async () => {
   try {
+    // --- Log de inicio absoluto ---
+    await pool.query('INSERT INTO rebuild_debug_logs (log) VALUES ($1)', ['[REBUILD-DEBUG] INICIO DE REBUILD']);
+
     // 1. Borrar todas las sesiones actuales
-    await pool.query('DELETE FROM connector_sessions');
+    // await pool.query('DELETE FROM connector_sessions'); // Desactivado temporalmente
     console.log('Tabla connector_sessions borrada.');
 
     // 2. Obtener todos los eventos de cargadores rápidos (sin filtro de potencia)
@@ -17,8 +20,8 @@ const pool = new Pool({
       `SELECT * FROM charger_monitoring ORDER BY charger_name, connector_id, timestamp`
     );
 
-    // --- Limpiar logs previos de debug ---
-    await pool.query('DELETE FROM rebuild_debug_logs');
+    // --- Limpiar logs previos de debug (desactivado temporalmente) ---
+    // await pool.query('DELETE FROM rebuild_debug_logs');
 
     // Función auxiliar para loguear en la tabla
     async function logDebug(msg) {
