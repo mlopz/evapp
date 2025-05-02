@@ -659,9 +659,9 @@ const initBackendProtection = async () => {
     const { rows: openSessions } = await pool.query('SELECT * FROM connector_sessions WHERE session_end IS NULL');
     if (openSessions.length > 0) {
       for (const session of openSessions) {
-        await pool.query('UPDATE connector_sessions SET session_end = $1 WHERE id = $2', [lastTimestamp, session.id]);
+        await pool.query('UPDATE connector_sessions SET session_end = $1 WHERE id = $2', [toISODateSafe(lastTimestamp), session.id]);
       }
-      console.log(`Cerradas ${openSessions.length} sesiones abiertas hasta ${lastTimestamp}`);
+      console.log(`Cerradas ${openSessions.length} sesiones abiertas hasta ${toISODateSafe(lastTimestamp)}`);
     }
 
     // 3. Registrar incidente de reinicio
@@ -675,7 +675,7 @@ const initBackendProtection = async () => {
     );
     await pool.query(
       'INSERT INTO backend_failures (type, details) VALUES ($1, $2)',
-      ['BACKEND_RESTART', `Cerradas ${openSessions.length} sesiones abiertas hasta ${lastTimestamp}`]
+      ['BACKEND_RESTART', `Cerradas ${openSessions.length} sesiones abiertas hasta ${toISODateSafe(lastTimestamp)}`]
     );
     console.log('Incidente de reinicio registrado en backend_failures.');
   } catch (err) {
@@ -754,14 +754,30 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
       [charger_name, connector_id]
     );
     if (res.rows.length === 0) {
+      let sessionStartISO = toISODateSafe(timestamp);
+      if (!sessionStartISO) return; // No registrar si la fecha es inválida
       await pool.query(
         `INSERT INTO connector_sessions (charger_name, connector_id, connector_type, power, session_start)
          VALUES ($1, $2, $3, $4, $5)`,
-        [charger_name, connector_id, connector_type, power, new Date(timestamp)]
+        [charger_name, connector_id, connector_type, power, sessionStartISO]
       );
     }
     return;
   }
+}
+
+// --- Función robusta para convertir cualquier timestamp a string ISO seguro ---
+function toISODateSafe(ts) {
+  if (typeof ts === 'number') {
+    // Si es muy grande, probablemente milisegundos
+    if (ts > 1e12) ts = Math.floor(ts / 1000);
+    return new Date(ts * 1000).toISOString();
+  }
+  if (typeof ts === 'string') {
+    const d = new Date(ts);
+    if (!isNaN(d.getTime())) return d.toISOString();
+  }
+  return null;
 }
 
 const rebuildConnectorSessions = require('./lib/rebuildConnectorSessions');
@@ -786,3 +802,10 @@ app.get('/api/backend-failures', async (req, res) => {
     res.status(500).json({ ok: false, error: err.toString() });
   }
 });
+
+// --- Exportar la función para uso en otros módulos si es necesario ---
+module.exports = {
+  toISODateSafe,
+  insertMonitoringRecordSafe,
+  initBackendProtection
+};
