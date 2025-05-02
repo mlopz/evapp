@@ -719,6 +719,10 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
   // FILTRO: ignorar si no es rápido
   if (!shouldProcessConnector(connector_id)) return;
   if (typeof power === 'string') power = parseFloat(power);
+  // --- DEFENSIVO: forzar timestamp a segundos si viene en milisegundos ---
+  if (typeof timestamp === 'number' && timestamp > 1e12) {
+    timestamp = Math.floor(timestamp / 1000);
+  }
   // Guardar en charger_monitoring como log histórico SOLO si es rápido
   await insertMonitoringRecord({ charger_name, connector_type, connector_id, power, status, timestamp });
 
