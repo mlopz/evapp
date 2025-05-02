@@ -764,81 +764,25 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
   }
 }
 
+const rebuildConnectorSessions = require('./lib/rebuildConnectorSessions');
+
 // --- Endpoint para reconstruir tabla connector_sessions desde charger_monitoring (ONE-TIME) ---
 app.post('/api/rebuild-connector-sessions', async (req, res) => {
   try {
-    await pool.query('DELETE FROM connector_sessions');
-    const { rows: events } = await pool.query(
-      `SELECT * FROM charger_monitoring WHERE power >= 60 ORDER BY charger_name, connector_id, timestamp`
-    );
-    let lastSession = {}; // key = charger_name + connector_id
-    let sessionsToInsert = [];
-    for (const event of events) {
-      const key = `${event.charger_name}__${event.connector_id}`;
-      if (!lastSession[key]) lastSession[key] = null;
-      if (event.status === 'Charging') {
-        if (!lastSession[key]) {
-          lastSession[key] = {
-            charger_name: event.charger_name,
-            connector_id: event.connector_id,
-            connector_type: event.connector_type,
-            power: event.power,
-            session_start: event.timestamp,
-          };
-        }
-      } else {
-        if (lastSession[key]) {
-          const session_end = event.timestamp;
-          // --- Validación robusta de timestamps ---
-          let startMs = Number(lastSession[key].session_start);
-          let endMs = Number(session_end);
-          // Si son strings, intentar parsear como fecha
-          if (isNaN(startMs) && typeof lastSession[key].session_start === 'string') {
-            startMs = Date.parse(lastSession[key].session_start);
-          }
-          if (isNaN(endMs) && typeof session_end === 'string') {
-            endMs = Date.parse(session_end);
-          }
-          if (
-            isNaN(startMs) || isNaN(endMs) || !startMs || !endMs || endMs <= startMs
-          ) {
-            console.warn(`[REBUILD] Sesión ignorada por timestamps inválidos: start=${lastSession[key].session_start}, end=${session_end}`);
-            lastSession[key] = null;
-            continue;
-          }
-          let duration_minutes = Math.round((endMs - startMs) / 60000);
-          // --- Nueva regla: descartar sesiones cortas ---
-          if (duration_minutes < 5) {
-            console.warn(`[REBUILD] Sesión eliminada por ser menor a 5 minutos: duración=${duration_minutes}, startMs=${startMs}, endMs=${endMs}`);
-            lastSession[key] = null;
-            continue;
-          }
-          // --- Lógica: limitar sesiones largas ---
-          if (duration_minutes > 90) {
-            console.warn(`[REBUILD] Sesión con duración ${duration_minutes} min forzada a 70 min: startMs=${startMs}, endMs=${endMs}`);
-            duration_minutes = 70;
-          }
-          sessionsToInsert.push({
-            ...lastSession[key],
-            session_end,
-            duration_minutes
-          });
-          lastSession[key] = null;
-        }
-      }
-    }
-    let count = 0;
-    for (const s of sessionsToInsert) {
-      await pool.query(
-        `INSERT INTO connector_sessions (charger_name, connector_id, connector_type, power, session_start, session_end, duration_minutes, last_heartbeat)
-         VALUES ($1, $2, $3, $4, to_timestamp($5 / 1000.0), to_timestamp($6 / 1000.0), $7, to_timestamp($6 / 1000.0))`,
-        [s.charger_name, s.connector_id, s.connector_type, s.power, s.session_start, s.session_end, s.duration_minutes]
-      );
-      count++;
-    }
-    res.json({ ok: true, message: `Reconstrucción completada: ${count} sesiones insertadas.` });
+    const result = await rebuildConnectorSessions(pool, { cleanDebugLogs: true });
+    res.json({ ok: true, message: `Reconstrucción completada: ${result.inserted} sesiones insertadas.` });
   } catch (err) {
     console.error('Error reconstruyendo connector_sessions:', err);
     res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// --- ENDPOINT PARA INCIDENTES DEL BACKEND ---
+app.get('/api/backend-failures', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM backend_failures ORDER BY timestamp DESC LIMIT 7');
+    res.json({ ok: true, incidents: rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.toString() });
   }
 });
