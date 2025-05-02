@@ -37,13 +37,17 @@ const pool = new Pool({
             power: event.power,
             session_start: event.timestamp,
           };
+          console.log(`[LOG] Apertura sesión: ${event.charger_name} - ${event.connector_id} | status: ${event.status} | ts: ${event.timestamp}`);
+        } else {
+          // Ya hay sesión abierta, ignorar
+          console.log(`[LOG] Ignorado Charging repetido: ${event.charger_name} - ${event.connector_id} | ts: ${event.timestamp}`);
         }
-        // Si ya hay sesión abierta, ignorar
       } else {
         // Si hay sesión abierta y termina la carga, registrar fin
         if (lastSession[key]) {
           const session_end = event.timestamp;
           const duration_minutes = Math.round((new Date(session_end) - new Date(lastSession[key].session_start)) / 60000);
+          console.log(`[LOG] Cierre sesión: ${event.charger_name} - ${event.connector_id} | status cierre: ${event.status} | ts cierre: ${event.timestamp} | ts apertura: ${lastSession[key].session_start} | duración: ${duration_minutes} min`);
           sessionsToInsert.push({
             ...lastSession[key],
             session_end,
@@ -64,6 +68,7 @@ const pool = new Pool({
             duration_minutes = 35;
             session_start = new Date(session_end.getTime() - 35 * 60000);
           }
+          console.log(`[LOG] Cierre sin inicio: ${event.charger_name} - ${event.connector_id} | status cierre: ${event.status} | ts cierre: ${event.timestamp} | inicio artificial: ${session_start.toISOString()} | duración: ${duration_minutes} min`);
           sessionsToInsert.push({
             charger_name: event.charger_name,
             connector_id: event.connector_id,
@@ -74,7 +79,6 @@ const pool = new Pool({
             duration_minutes
           });
           lastSessionEnd[key] = session_end.toISOString();
-          console.log(`Cierre sin inicio: ${event.charger_name} - ${event.connector_id} (${event.timestamp}) inicio artificial: ${session_start.toISOString()} duración: ${duration_minutes}`);
         }
       }
     }
@@ -84,9 +88,11 @@ const pool = new Pool({
     for (const key in lastSession) {
       const sesion = lastSession[key];
       if (sesion) {
-        console.log(`Cierre artificial para ${sesion.charger_name} - ${sesion.connector_id} desde ${sesion.session_start}`);
+        console.log(`[LOG] Cierre artificial (70min) para ${sesion.charger_name} - ${sesion.connector_id} | ts apertura: ${sesion.session_start}`);
         const session_start = new Date(sesion.session_start);
         const session_end = new Date(session_start.getTime() + 70 * 60000); // +70 minutos
+        const duration_minutes = 70;
+        console.log(`[LOG] Cierre sesión artificial: ${sesion.charger_name} - ${sesion.connector_id} | status cierre: artificial | ts cierre: ${session_end.toISOString()} | ts apertura: ${session_start.toISOString()} | duración: ${duration_minutes} min`);
         sessionsToInsert.push({
           charger_name: sesion.charger_name,
           connector_id: sesion.connector_id,
@@ -94,7 +100,7 @@ const pool = new Pool({
           power: sesion.power,
           session_start: session_start.toISOString(),
           session_end: session_end.toISOString(),
-          duration_minutes: 70
+          duration_minutes
         });
         console.log(`Cierre de seguridad: sesión abierta para ${sesion.charger_name} - ${sesion.connector_id} cerrada a los 70 minutos.`);
       }
