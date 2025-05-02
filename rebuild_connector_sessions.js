@@ -28,8 +28,8 @@ const pool = new Pool({
       if (!lastSessionEnd[key]) lastSessionEnd[key] = null;
 
       if (event.status === 'Charging') {
-        // Si no hay sesión abierta, abrir una nueva
         if (!lastSession[key]) {
+          // Abrir nueva sesión
           lastSession[key] = {
             charger_name: event.charger_name,
             connector_id: event.connector_id,
@@ -37,62 +37,39 @@ const pool = new Pool({
             power: event.power,
             session_start: event.timestamp,
           };
-          console.log(`[LOG] Apertura sesión: ${event.charger_name} - ${event.connector_id} | status: ${event.status} | ts: ${event.timestamp}`);
+          console.log(`[REBUILD-FIX] Apertura sesión: ${event.charger_name} - ${event.connector_id} | status: ${event.status} | ts: ${event.timestamp}`);
         } else {
-          // Ya hay sesión abierta, ignorar
-          console.log(`[LOG] Ignorado Charging repetido: ${event.charger_name} - ${event.connector_id} | ts: ${event.timestamp}`);
+          // Ya hay sesión abierta, ignorar Charging repetido
+          console.log(`[REBUILD-FIX] Ignorado Charging repetido: ${event.charger_name} - ${event.connector_id} | ts: ${event.timestamp}`);
         }
       } else {
-        // Si hay sesión abierta y termina la carga, registrar fin
         if (lastSession[key]) {
+          // Solo cerrar si hay sesión abierta
           const session_end = event.timestamp;
           const duration_minutes = Math.round((new Date(session_end) - new Date(lastSession[key].session_start)) / 60000);
-          console.log(`[LOG] Cierre sesión: ${event.charger_name} - ${event.connector_id} | status cierre: ${event.status} | ts cierre: ${event.timestamp} | ts apertura: ${lastSession[key].session_start} | duración: ${duration_minutes} min`);
           sessionsToInsert.push({
             ...lastSession[key],
             session_end,
             duration_minutes
           });
+          console.log(`[REBUILD-FIX] Cierre sesión: ${event.charger_name} - ${event.connector_id} | status cierre: ${event.status} | ts cierre: ${event.timestamp} | ts apertura: ${lastSession[key].session_start} | duración: ${duration_minutes} min`);
           lastSessionEnd[key] = session_end;
           lastSession[key] = null;
         } else {
-          // --- cierre sin sesión abierta ---
-          const session_end = new Date(event.timestamp);
-          const prev_end = lastSessionEnd[key] ? new Date(lastSessionEnd[key]) : null;
-          let session_start, duration_minutes;
-          if (prev_end && (session_end - prev_end) / 60000 < 70) {
-            session_start = new Date(prev_end.getTime() + 10 * 60000); // +10 min
-            duration_minutes = Math.round((session_end - session_start) / 60000);
-            if (duration_minutes < 1) duration_minutes = 1;
-          } else {
-            duration_minutes = 35;
-            session_start = new Date(session_end.getTime() - 35 * 60000);
-          }
-          console.log(`[LOG] Cierre sin inicio: ${event.charger_name} - ${event.connector_id} | status cierre: ${event.status} | ts cierre: ${event.timestamp} | inicio artificial: ${session_start.toISOString()} | duración: ${duration_minutes} min`);
-          sessionsToInsert.push({
-            charger_name: event.charger_name,
-            connector_id: event.connector_id,
-            connector_type: event.connector_type,
-            power: event.power,
-            session_start: session_start.toISOString(),
-            session_end: session_end.toISOString(),
-            duration_minutes
-          });
-          lastSessionEnd[key] = session_end.toISOString();
+          // Evento de cierre sin sesión abierta: ignorar o crear sesión artificial si lo deseas
+          console.log(`[REBUILD-FIX] Evento de cierre sin sesión abierta: ${event.charger_name} - ${event.connector_id} | status: ${event.status} | ts: ${event.timestamp}`);
         }
       }
     }
 
     // --- CIERRE DE SEGURIDAD: cerrar sesiones abiertas a los 70 minutos ---
-    console.log('Estado de lastSession antes de cierres artificiales:', lastSession);
+    console.log('[REBUILD-FIX] Estado de lastSession antes de cierres artificiales:', lastSession);
     for (const key in lastSession) {
       const sesion = lastSession[key];
       if (sesion) {
-        console.log(`[LOG] Cierre artificial (70min) para ${sesion.charger_name} - ${sesion.connector_id} | ts apertura: ${sesion.session_start}`);
         const session_start = new Date(sesion.session_start);
         const session_end = new Date(session_start.getTime() + 70 * 60000); // +70 minutos
         const duration_minutes = 70;
-        console.log(`[LOG] Cierre sesión artificial: ${sesion.charger_name} - ${sesion.connector_id} | status cierre: artificial | ts cierre: ${session_end.toISOString()} | ts apertura: ${session_start.toISOString()} | duración: ${duration_minutes} min`);
         sessionsToInsert.push({
           charger_name: sesion.charger_name,
           connector_id: sesion.connector_id,
@@ -102,7 +79,7 @@ const pool = new Pool({
           session_end: session_end.toISOString(),
           duration_minutes
         });
-        console.log(`Cierre de seguridad: sesión abierta para ${sesion.charger_name} - ${sesion.connector_id} cerrada a los 70 minutos.`);
+        console.log(`[REBUILD-FIX] Cierre artificial (70min) para ${sesion.charger_name} - ${sesion.connector_id} | ts apertura: ${sesion.session_start} | ts cierre: ${session_end.toISOString()} | duración: ${duration_minutes} min`);
       }
     }
 
