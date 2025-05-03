@@ -10,13 +10,14 @@ const pool = require('./db');
  * @param {number} data.power - Potencia del conector
  * @param {string} data.status - Estado del conector
  * @param {number} data.timestamp - Timestamp en milisegundos
+ * @param {string} data.reason - Motivo del registro (state_change, backend_restart, session_end, etc)
  */
-async function insertMonitoringRecord({ charger_name, connector_type, connector_id, power, status, timestamp }) {
-  console.log('[insertMonitoringRecord] llamado con:', { charger_name, connector_type, connector_id, power, status, timestamp });
+async function insertMonitoringRecord({ charger_name, connector_type, connector_id, power, status, timestamp, reason }) {
+  console.log('[insertMonitoringRecord] llamado con:', { charger_name, connector_type, connector_id, power, status, timestamp, reason });
   try {
     await pool.query(
-      'INSERT INTO charger_monitoring (charger_name, connector_type, connector_id, power, status, timestamp) VALUES ($1, $2, $3, $4, $5, $6)',
-      [charger_name, connector_type, connector_id, power, status, timestamp]
+      'INSERT INTO charger_monitoring (charger_name, connector_type, connector_id, power, status, timestamp, reason) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+      [charger_name, connector_type, connector_id, power, status, timestamp, reason]
     );
     console.log('[insertMonitoringRecord] INSERT exitoso');
   } catch (err) {
@@ -36,6 +37,7 @@ module.exports = {
 //     connector_id: 'Auxicar-CCS 2-0',
 //     power: 60,
 //     status: 'Charging',
-//     timestamp: Date.now()
+//     timestamp: Date.now(),
+//     reason: 'state_change'
 //   });
 // })();

@@ -88,7 +88,8 @@ function updateConnectorsState(newChargers) {
           connector_id: connectorId,
           power: connector.power,
           status: 'SessionEnded',
-          timestamp: now
+          timestamp: now,
+          reason: 'session_end'
         }).catch(err => console.error('Error insertando SessionEnded:', err));
       }
       prev.lastState = prev.state;
@@ -201,7 +202,8 @@ function closeAndOpenChargingSessionsOnStartup() {
             connector_id: connectorId,
             power: null,
             status: 'SessionEnded',
-            timestamp: now
+            timestamp: now,
+            reason: 'backend_restart'
           }).catch(err => console.error('Error cerrando sesión previa al iniciar backend:', err));
           state.sessionStart = null;
           state.state = 'Available';
@@ -215,7 +217,8 @@ function closeAndOpenChargingSessionsOnStartup() {
           connector_id: connectorId,
           power: null,
           status: 'Charging',
-          timestamp: now
+          timestamp: now,
+          reason: 'backend_restart'
         }).catch(err => console.error('Error abriendo nueva sesión Charging al iniciar backend:', err));
         opened++;
       }
@@ -730,9 +733,9 @@ function shouldProcessConnector(connectorId) {
 }
 
 // --- MODIFICAR insertMonitoringRecordSafe PARA ACTUALIZAR HEARTBEAT SI YA EXISTE SESION ACTIVA ---
-async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp }) {
+async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp, reason = 'state_change' }) {
   // FILTRO: ignorar si no es rápido
-  if (!shouldProcessConnector(connector_id)) return;
+  if (!shouldProcessConnector(connectorId)) return;
   if (typeof power === 'string') power = parseFloat(power);
   // --- DEFENSIVO: asegurar timestamp en segundos ---
   if (typeof timestamp === 'number') {
@@ -755,7 +758,7 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
     }
   }
   // Guardar en charger_monitoring como log histórico SOLO si es rápido
-  await insertMonitoringRecord({ charger_name, connector_type, connector_id, power, status, timestamp });
+  await insertMonitoringRecord({ charger_name, connector_type, connector_id, power, status, timestamp, reason });
 
   // Solo registrar sesión cuando status es 'SessionEnded'
   if (status === 'SessionEnded') {
