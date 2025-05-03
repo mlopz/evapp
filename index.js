@@ -25,7 +25,8 @@ let connectorsState = {}; // { chargerName: { connectorId: { state, lastState, l
 let sessions = []; // [{ chargerName, connectorId, start, end, durationMinutes }]
 
 function getNow() {
-  return Date.now();
+  // Siempre retorna segundos (entero)
+  return Math.floor(Date.now() / 1000);
 }
 
 function minutesBetween(ts1, ts2) {
@@ -185,7 +186,7 @@ async function syncAndCloseAndOpenChargingSessionsOnStartup() {
 setTimeout(syncAndCloseAndOpenChargingSessionsOnStartup, 2000); // Menor espera porque pollChargers es await
 
 function closeAndOpenChargingSessionsOnStartup() {
-  const now = Date.now();
+  const now = getNow();
   let closed = 0;
   let opened = 0;
   for (const chargerName in connectorsState) {
@@ -731,9 +732,25 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
   // FILTRO: ignorar si no es rápido
   if (!shouldProcessConnector(connector_id)) return;
   if (typeof power === 'string') power = parseFloat(power);
-  // --- DEFENSIVO: forzar timestamp a segundos si viene en milisegundos ---
-  if (typeof timestamp === 'number' && timestamp > 1e12) {
-    timestamp = Math.floor(timestamp / 1000);
+  // --- DEFENSIVO: asegurar timestamp en segundos ---
+  if (typeof timestamp === 'number') {
+    if (timestamp > 1e12) {
+      // Si viene en milisegundos, pasar a segundos
+      timestamp = Math.floor(timestamp / 1000);
+    } else if (timestamp > 1e10) {
+      // Si es un número muy grande pero menor a 1e12, probablemente error de conversión
+      console.warn('[insertMonitoringRecordSafe] Timestamp sospechoso:', timestamp);
+      timestamp = Math.floor(timestamp / 1000);
+    }
+  } else {
+    // Si viene como string, intentar parsear
+    const tNum = Number(timestamp);
+    if (!isNaN(tNum)) {
+      timestamp = tNum > 1e12 ? Math.floor(tNum / 1000) : Math.floor(tNum);
+    } else {
+      console.warn('[insertMonitoringRecordSafe] Timestamp no numérico:', timestamp);
+      return;
+    }
   }
   // Guardar en charger_monitoring como log histórico SOLO si es rápido
   await insertMonitoringRecord({ charger_name, connector_type, connector_id, power, status, timestamp });
