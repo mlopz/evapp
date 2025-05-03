@@ -797,6 +797,14 @@ app.post('/api/rebuild-connector-sessions', async (req, res) => {
   }
 });
 
+// --- Scheduler automático para el rebuild de sesiones cada 60 minutos ---
+const REBUILD_INTERVAL = 60 * 60 * 1000; // 60 minutos
+setInterval(() => {
+  rebuildConnectorSessions(pool, { cleanDebugLogs: false })
+    .then(result => console.log(`[REBUILD] Ejecutado automáticamente. Sesiones insertadas: ${result.inserted}`))
+    .catch(err => console.error('[REBUILD] Error en ejecución automática:', err));
+}, REBUILD_INTERVAL);
+
 // --- ENDPOINT PARA INCIDENTES DEL BACKEND ---
 app.get('/api/backend-failures', async (req, res) => {
   try {
