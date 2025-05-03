@@ -1,0 +1,26 @@
+{
+  "from": "2025-05-01",
+  "to": "2025-05-02",
+  "escenario": "intermedio",
+  "tarifaSeleccionada": "comercial",
+  "sesiones": [
+    {
+      "charger_name": "Cargador Test",
+      "connector_id": "A1",
+      "session_start": "2025-05-01T10:00:00",
+      "session_end": "2025-05-01T11:00:00"
+    },
+    {
+      "charger_name": "Cargador Test",
+      "connector_id": "A2",
+      "session_start": "2025-05-01T10:30:00",
+      "session_end": "2025-05-01T11:30:00"
+    },
+    {
+      "charger_name": "Cargador Test",
+      "connector_id": "A3",
+      "session_start": "2025-05-01T12:00:00",
+      "session_end": "2025-05-01T13:00:00"
+    }
+  ]
+}
