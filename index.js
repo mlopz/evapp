@@ -78,6 +78,18 @@ function updateConnectorsState(newChargers) {
       const prev = connectorsState[chargerName][connectorId];
       const newState = connector.status;
       // SOLO lógica de registro real, SIN cierre automático
+      // --- NUEVO: Detectar cierre de sesión ---
+      if (prev.state === 'Charging' && newState !== 'Charging') {
+        console.log(`[MONITORING] Detectado cierre de sesión: ${chargerName} | ${connectorId} | ${connector.type} | ${connector.power} | ${now}`);
+        insertMonitoringRecordSafe({
+          charger_name: chargerName,
+          connector_type: connector.type,
+          connector_id: connectorId,
+          power: connector.power,
+          status: 'SessionEnded',
+          timestamp: now
+        }).catch(err => console.error('Error insertando SessionEnded:', err));
+      }
       prev.lastState = prev.state;
       prev.state = newState;
       prev.lastUpdate = now;
