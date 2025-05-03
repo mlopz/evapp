@@ -104,7 +104,10 @@ function calcularGastoElectrico(tarifa, kWh) {
 // POST /api/rentabilidad
 // Body: { from, to, escenario, tarifaSeleccionada, sesiones }
 router.post('/api/rentabilidad', async (req, res) => {
+  console.log('DEBUG rentabilidad: request recibido');
   try {
+    const bodyStr = JSON.stringify(req.body);
+    console.log('Tamaño del body:', bodyStr.length, 'bytes');
     const { from, to, escenario, tarifaSeleccionada, sesiones } = req.body;
     // Cargar archivos de criterios
     const costos = JSON.parse(fs.readFileSync(COSTOS_PATH, 'utf8'));
@@ -150,7 +153,8 @@ router.post('/api/rentabilidad', async (req, res) => {
     // Devuelve array para la tabla
     res.json(Object.values(resultados));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('ERROR rentabilidad:', err);
+    res.status(500).json({ error: 'Error interno en el cálculo de rentabilidad', detalle: err.message });
   }
 });
 
