@@ -735,7 +735,7 @@ function shouldProcessConnector(connectorId) {
 // --- MODIFICAR insertMonitoringRecordSafe PARA ACTUALIZAR HEARTBEAT SI YA EXISTE SESION ACTIVA ---
 async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp, reason = 'state_change' }) {
   // FILTRO: ignorar si no es rápido
-  if (!shouldProcessConnector(connectorId)) return;
+  if (!shouldProcessConnector(connector_id)) return;
   if (typeof power === 'string') power = parseFloat(power);
   // --- DEFENSIVO: asegurar timestamp en segundos ---
   if (typeof timestamp === 'number') {
