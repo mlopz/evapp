@@ -28,19 +28,32 @@ function Rentabilidad({ fetchSesiones }) {
     setError("");
     fetchSesiones(from, to)
       .then(sesiones => {
+        if (!sesiones || sesiones.length === 0) {
+          setResultados([]);
+          setLoading(false);
+          setError("No hay sesiones en el rango seleccionado");
+          return;
+        }
         return fetch("/api/rentabilidad", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ from, to, escenario, tarifaSeleccionada, sesiones })
         })
-          .then(r => {
-            if (!r.ok) throw new Error("Error en backend");
-            return r.json();
-          });
+          .then(async r => {
+            const text = await r.text();
+            console.log("DEBUG respuesta backend:", text);
+            if (!r.ok) throw new Error("Error en backend: " + text);
+            return JSON.parse(text);
+          })
+          .then(data => setResultados(data))
+          .catch(err => setError(err.message))
+          .finally(() => setLoading(false));
       })
-      .then(data => setResultados(data))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch(err => {
+        setResultados([]);
+        setLoading(false);
+        setError("Error al obtener sesiones: " + err.message);
+      });
   }, [from, to, escenario, tarifaSeleccionada, fetchSesiones]);
 
   return (
