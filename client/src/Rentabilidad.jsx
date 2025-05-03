@@ -5,18 +5,19 @@ import dayjs from "dayjs";
 function getChargerInfo(name) {
   let empresa = "Desconocido";
   let potencia = 60;
-  if (name.includes("UTE")) {
+  const lower = name.toLowerCase();
+  if (name.includes("UTE") || lower.includes("zonamerica")) {
     empresa = "UTE";
     if (
       name.includes("ANCAP Trinidad") ||
-      name.toLowerCase().includes("leguizamon")
+      lower.includes("leguizamon")
     ) {
       potencia = 300;
     }
-  } else if (name.toLowerCase().includes("mobility")) {
+  } else if (lower.includes("mobility") || lower.includes("auxicar")) {
     empresa = "Mobility";
     potencia = 60;
-  } else if (name.toLowerCase().includes("eone")) {
+  } else if (lower.includes("eone")) {
     empresa = "eOne";
     potencia = 60;
   }
@@ -141,6 +142,12 @@ export default function Rentabilidad({ fetchSesiones }) {
   const [to, setTo] = useState(dayjs().endOf("month").format("YYYY-MM-DD"));
   const [sesiones, setSesiones] = useState([]);
   const [resultados, setResultados] = useState([]);
+
+  // --- NUEVO: Orden y búsqueda ---
+  const [sortBy, setSortBy] = useState("nombre");
+  const [sortDirection, setSortDirection] = useState("asc");
+  const [buscador, setBuscador] = useState("");
+
   useEffect(() => {
     async function cargar() {
       const data = await fetchSesiones(from, to); // Debes pasar esta función desde el dashboard
@@ -151,6 +158,32 @@ export default function Rentabilidad({ fetchSesiones }) {
   useEffect(() => {
     setResultados(procesarSesiones(sesiones, escenario));
   }, [sesiones, escenario]);
+
+  // --- Filtrar y ordenar resultados ---
+  let resultadosFiltrados = resultados.filter(r =>
+    r.nombre.toLowerCase().includes(buscador.toLowerCase())
+  );
+  resultadosFiltrados = resultadosFiltrados.sort((a, b) => {
+    let vA = a[sortBy];
+    let vB = b[sortBy];
+    // Si es string, comparar insensible a mayúsculas
+    if (typeof vA === 'string') vA = vA.toLowerCase();
+    if (typeof vB === 'string') vB = vB.toLowerCase();
+    if (vA < vB) return sortDirection === 'asc' ? -1 : 1;
+    if (vA > vB) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // --- Handler para ordenar ---
+  const handleSort = (col) => {
+    if (sortBy === col) {
+      setSortDirection(dir => dir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(col);
+      setSortDirection('asc');
+    }
+  };
+
   return (
     <div className="p-4">
       <h2 className="text-xl font-bold mb-4 text-orange-700">Rentabilidad por escenario</h2>
@@ -185,17 +218,35 @@ export default function Rentabilidad({ fetchSesiones }) {
           />
         </div>
       </div>
+      {/* Buscador para rentabilidad */}
+      <div className="mb-4 flex justify-end">
+        <input
+          type="text"
+          className="w-full max-w-xs px-3 py-2 border border-orange-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 text-base shadow"
+          placeholder="Buscar cargador/par..."
+          value={buscador}
+          onChange={e => setBuscador(e.target.value)}
+        />
+      </div>
       <table className="min-w-full bg-white border rounded shadow">
         <thead className="bg-orange-500 text-white">
           <tr>
-            <th className="px-2 py-1">Conector/Par</th>
-            <th className="px-2 py-1">Minutos</th>
-            <th className="px-2 py-1">kWh</th>
-            <th className="px-2 py-1">Recaudación neta ($)</th>
+            <th className="px-2 py-1 cursor-pointer select-none" onClick={()=>handleSort('nombre')}>
+              Conector/Par {sortBy==='nombre' && (sortDirection==='asc'?'▲':'▼')}
+            </th>
+            <th className="px-2 py-1 cursor-pointer select-none" onClick={()=>handleSort('minutos')}>
+              Minutos {sortBy==='minutos' && (sortDirection==='asc'?'▲':'▼')}
+            </th>
+            <th className="px-2 py-1 cursor-pointer select-none" onClick={()=>handleSort('kWh')}>
+              kWh {sortBy==='kWh' && (sortDirection==='asc'?'▲':'▼')}
+            </th>
+            <th className="px-2 py-1 cursor-pointer select-none" onClick={()=>handleSort('recaudacion')}>
+              Recaudación neta ($) {sortBy==='recaudacion' && (sortDirection==='asc'?'▲':'▼')}
+            </th>
           </tr>
         </thead>
         <tbody>
-          {resultados.map((r) => (
+          {resultadosFiltrados.map((r) => (
             <tr key={r.nombre} className="border-b">
               <td className="px-2 py-1">{r.nombre}</td>
               <td className="px-2 py-1">{Math.round(r.minutos)}</td>
