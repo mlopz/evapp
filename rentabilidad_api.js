@@ -72,6 +72,27 @@ function calcularOcupacionSimultanea(sesiones, session) {
   ).length;
 }
 
+// Calcular ocupación simultánea para cada sesión de un cargador.
+function calcularOcupacionSimultaneaPorSesion(sesiones) {
+  return sesiones.map(sesionActual => {
+    const inicioA = dayjs(sesionActual.session_start);
+    const finA = dayjs(sesionActual.session_end);
+    // Contar cuántas sesiones se solapan con la actual para el mismo cargador
+    const ocupadosSimultaneo = sesiones.filter(s => {
+      if (s === sesionActual) return false;
+      if (s.charger_name !== sesionActual.charger_name) return false;
+      const inicioB = dayjs(s.session_start);
+      const finB = dayjs(s.session_end);
+      // Hay solapamiento si los intervalos se cruzan
+      return inicioA.isBefore(finB) && finA.isAfter(inicioB);
+    }).length + 1; // +1 para incluir la sesión actual
+    return {
+      ...sesionActual,
+      ocupadosSimultaneo
+    };
+  });
+}
+
 // Calcular rentabilidad bruta
 function calcularRecaudacionBruta({ empresa }, kWh, sessionStart, sessionEnd, costos) {
   if (empresa === "UTE") {
@@ -120,12 +141,14 @@ router.post('/api/rentabilidad', async (req, res) => {
       const start = dayjs(s.session_start);
       return start.isAfter(dayjs(from).subtract(1, 'day')) && start.isBefore(dayjs(to).add(1, 'day'));
     });
+    // --- NUEVO: calcular ocupación simultánea para cada sesión ---
+    const sesionesConOcupacion = calcularOcupacionSimultaneaPorSesion(sesionesFiltradas);
     // Procesar sesiones
     const resultados = {};
-    sesionesFiltradas.forEach((session) => {
+    sesionesConOcupacion.forEach((session) => {
       const { empresa, potencia } = getChargerInfo(session.charger_name);
-      const ocupacion = calcularOcupacionSimultanea(sesionesFiltradas, session);
-      const power = getSessionPower({ empresa, potencia }, ocupacion, escenario);
+      // Usar el campo ocupadosSimultaneo para lógica de potencia
+      const power = getSessionPower({ empresa, potencia }, session.ocupadosSimultaneo, escenario);
       const minutos = dayjs(session.session_end).diff(dayjs(session.session_start), "minute");
       const kWh = power * (minutos / 60);
       const recaudacion_bruta = calcularRecaudacionBruta({ empresa }, kWh, session.session_start, session.session_end, costos);
