@@ -228,6 +228,8 @@ function closeAndOpenChargingSessionsOnStartup() {
 setInterval(pollChargers, POLL_INTERVAL);
 pollChargers();
 
+app.use(require('./rentabilidad_api'));
+
 app.get('/api/chargers', (req, res) => {
   console.log('--- /api/chargers llamado ---');
   const allChargers = getChargersWithAccumulated();
