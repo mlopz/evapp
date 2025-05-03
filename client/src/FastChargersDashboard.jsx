@@ -255,97 +255,6 @@ export default function FastChargersDashboard() {
       {/* Sección principal de cards de cargadores solo en Dashboard */}
       {tab==='dashboard' && (
         <div>
-          {/* Sección Estadísticas */}
-          <div className="bg-white rounded-xl shadow p-6">
-            <h3 className="text-2xl font-bold text-orange-700 mb-4">Estadísticas de uso</h3>
-            <div className="flex gap-4 mb-6 flex-wrap items-end">
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">Desde:</label>
-                <input type="date" value={fechaDesde} onChange={e=>setFechaDesde(e.target.value)} className="border px-2 py-1 rounded focus:ring focus:ring-orange-300" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">Hasta:</label>
-                <input type="date" value={fechaHasta} onChange={e=>setFechaHasta(e.target.value)} className="border px-2 py-1 rounded focus:ring focus:ring-orange-300" />
-              </div>
-            </div>
-            {sesionesParaEstad.length === 0 && (
-              <div className="text-center text-red-500 font-semibold mb-4">No hay sesiones en el rango de fechas seleccionado.</div>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <h4 className="font-bold text-orange-700 mb-2">Top 10 cargadores con más minutos</h4>
-                <div className="w-full max-w-full">
-                  <table className="w-full text-[11px] md:text-xs text-gray-700 border border-orange-200 rounded-lg">
-                    <thead className="bg-gradient-to-r from-orange-100 to-orange-200">
-                      <tr>
-                        <th className="py-1 px-1 text-left font-semibold whitespace-nowrap max-w-[90px]">Cargador</th>
-                        <th className="py-1 px-1 text-right font-semibold whitespace-nowrap max-w-[45px]">Min</th>
-                        <th className="py-1 px-1 text-right font-semibold whitespace-nowrap max-w-[55px]">Prom. 24h</th>
-                        <th className="py-1 px-1 text-right font-semibold whitespace-nowrap max-w-[80px]">Top 3 horas</th>
-                        <th className="py-1 px-1 text-right font-semibold whitespace-nowrap max-w-[80px]">Top 3 menos</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {top10Mas.map((r,i)=>(
-                        <tr key={r.charger} className="border-b last:border-b-0 hover:bg-orange-50 transition">
-                          <td className="py-1 px-1 max-w-[90px] truncate" title={r.charger}>{i+1}. {r.charger}</td>
-                          <td className="py-1 px-1 text-right font-semibold font-mono text-orange-800">{r.minutos}</td>
-                          <td className="py-1 px-1 text-right font-mono">{r.promedioDiario}</td>
-                          <td className="py-1 px-1 text-right">{renderHorasBadges(r.top3Horas, 'orange')}</td>
-                          <td className="py-1 px-1 text-right">{renderHorasBadges(r.top3HorasMenos, 'gray')}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              <div>
-                <h4 className="font-bold text-orange-700 mb-2">Top 10 cargadores con menos minutos</h4>
-                <div className="w-full max-w-full">
-                  <table className="w-full text-[11px] md:text-xs text-gray-700 border border-orange-200 rounded-lg">
-                    <thead className="bg-gradient-to-r from-orange-100 to-orange-200">
-                      <tr>
-                        <th className="py-1 px-1 text-left font-semibold whitespace-nowrap max-w-[90px]">Cargador</th>
-                        <th className="py-1 px-1 text-right font-semibold whitespace-nowrap max-w-[45px]">Min</th>
-                        <th className="py-1 px-1 text-right font-semibold whitespace-nowrap max-w-[55px]">Prom. 24h</th>
-                        <th className="py-1 px-1 text-right font-semibold whitespace-nowrap max-w-[80px]">Top 3 horas</th>
-                        <th className="py-1 px-1 text-right font-semibold whitespace-nowrap max-w-[80px]">Top 3 menos</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {top10Menos.map((r,i)=>(
-                        <tr key={r.charger} className="border-b last:border-b-0 hover:bg-orange-50 transition">
-                          <td className="py-1 px-1 max-w-[90px] truncate" title={r.charger}>{i+1}. {r.charger}</td>
-                          <td className="py-1 px-1 text-right font-semibold font-mono text-orange-800">{r.minutos}</td>
-                          <td className="py-1 px-1 text-right font-mono">{r.promedioDiario}</td>
-                          <td className="py-1 px-1 text-right">{renderHorasBadges(r.top3Horas, 'orange')}</td>
-                          <td className="py-1 px-1 text-right">{renderHorasBadges(r.top3HorasMenos, 'gray')}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-            <div className="mt-8">
-              <h3 className="text-lg font-bold text-orange-700 mb-2">Visualización geográfica de cargadores</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl shadow p-2 border border-orange-100">
-                  <h4 className="font-semibold text-orange-600 text-sm mb-1 text-center">Zonas de influencia (100 km)</h4>
-                  <MapaZonasInfluencia cargadores={cargadores} />
-                </div>
-                <div className="bg-white rounded-xl shadow p-2 border border-orange-100">
-                  <h4 className="font-semibold text-orange-600 text-sm mb-1 text-center">Volumen de uso (por rango de fechas)</h4>
-                  <MapaVolumenUso cargadores={cargadores} volumenes={volumenesPorCargador} maxTop10={maxTop10} />
-                  <div className="flex justify-center gap-2 mt-2 text-xs">
-                    <span className="inline-block w-3 h-3 rounded-full bg-green-500"></span> Bajo
-                    <span className="inline-block w-3 h-3 rounded-full bg-orange-400"></span> Medio
-                    <span className="inline-block w-3 h-3 rounded-full bg-red-600"></span> Alto
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
           {/* Sección Cargadores (vista actual) */}
           <div className="flex flex-col md:flex-row gap-6 justify-center mb-10">
             {ESTADOS.map(({ key, label, color, icon }) => (
@@ -532,6 +441,101 @@ export default function FastChargersDashboard() {
           )}
         </div>
       )}
+
+      {/* Sección Estadísticas solo en la pestaña de estadísticas */}
+      {tab==='estadisticas' && (
+        <div className="bg-white rounded-xl shadow p-6">
+          <h3 className="text-2xl font-bold text-orange-700 mb-4">Estadísticas de uso</h3>
+          <div className="flex gap-4 mb-6 flex-wrap items-end">
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Desde:</label>
+              <input type="date" value={fechaDesde} onChange={e=>setFechaDesde(e.target.value)} className="border px-2 py-1 rounded focus:ring focus:ring-orange-300" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Hasta:</label>
+              <input type="date" value={fechaHasta} onChange={e=>setFechaHasta(e.target.value)} className="border px-2 py-1 rounded focus:ring focus:ring-orange-300" />
+            </div>
+          </div>
+          {sesionesParaEstad.length === 0 && (
+            <div className="text-center text-red-500 font-semibold mb-4">No hay sesiones en el rango de fechas seleccionado.</div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h4 className="font-bold text-orange-700 mb-2">Top 10 cargadores con más minutos</h4>
+              <div className="w-full max-w-full">
+                <table className="w-full text-[11px] md:text-xs text-gray-700 border border-orange-200 rounded-lg">
+                  <thead className="bg-gradient-to-r from-orange-100 to-orange-200">
+                    <tr>
+                      <th className="py-1 px-1 text-left font-semibold whitespace-nowrap max-w-[90px]">Cargador</th>
+                      <th className="py-1 px-1 text-right font-semibold whitespace-nowrap max-w-[45px]">Min</th>
+                      <th className="py-1 px-1 text-right font-semibold whitespace-nowrap max-w-[55px]">Prom. 24h</th>
+                      <th className="py-1 px-1 text-right font-semibold whitespace-nowrap max-w-[80px]">Top 3 horas</th>
+                      <th className="py-1 px-1 text-right font-semibold whitespace-nowrap max-w-[80px]">Top 3 menos</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {top10Mas.map((r,i)=>(
+                      <tr key={r.charger} className="border-b last:border-b-0 hover:bg-orange-50 transition">
+                        <td className="py-1 px-1 max-w-[90px] truncate" title={r.charger}>{i+1}. {r.charger}</td>
+                        <td className="py-1 px-1 text-right font-semibold font-mono text-orange-800">{r.minutos}</td>
+                        <td className="py-1 px-1 text-right font-mono">{r.promedioDiario}</td>
+                        <td className="py-1 px-1 text-right">{renderHorasBadges(r.top3Horas, 'orange')}</td>
+                        <td className="py-1 px-1 text-right">{renderHorasBadges(r.top3HorasMenos, 'gray')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-bold text-orange-700 mb-2">Top 10 cargadores con menos minutos</h4>
+              <div className="w-full max-w-full">
+                <table className="w-full text-[11px] md:text-xs text-gray-700 border border-orange-200 rounded-lg">
+                  <thead className="bg-gradient-to-r from-orange-100 to-orange-200">
+                    <tr>
+                      <th className="py-1 px-1 text-left font-semibold whitespace-nowrap max-w-[90px]">Cargador</th>
+                      <th className="py-1 px-1 text-right font-semibold whitespace-nowrap max-w-[45px]">Min</th>
+                      <th className="py-1 px-1 text-right font-semibold whitespace-nowrap max-w-[55px]">Prom. 24h</th>
+                      <th className="py-1 px-1 text-right font-semibold whitespace-nowrap max-w-[80px]">Top 3 horas</th>
+                      <th className="py-1 px-1 text-right font-semibold whitespace-nowrap max-w-[80px]">Top 3 menos</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {top10Menos.map((r,i)=>(
+                      <tr key={r.charger} className="border-b last:border-b-0 hover:bg-orange-50 transition">
+                        <td className="py-1 px-1 max-w-[90px] truncate" title={r.charger}>{i+1}. {r.charger}</td>
+                        <td className="py-1 px-1 text-right font-semibold font-mono text-orange-800">{r.minutos}</td>
+                        <td className="py-1 px-1 text-right font-mono">{r.promedioDiario}</td>
+                        <td className="py-1 px-1 text-right">{renderHorasBadges(r.top3Horas, 'orange')}</td>
+                        <td className="py-1 px-1 text-right">{renderHorasBadges(r.top3HorasMenos, 'gray')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div className="mt-8">
+            <h3 className="text-lg font-bold text-orange-700 mb-2">Visualización geográfica de cargadores</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white rounded-xl shadow p-2 border border-orange-100">
+                <h4 className="font-semibold text-orange-600 text-sm mb-1 text-center">Zonas de influencia (100 km)</h4>
+                <MapaZonasInfluencia cargadores={cargadores} />
+              </div>
+              <div className="bg-white rounded-xl shadow p-2 border border-orange-100">
+                <h4 className="font-semibold text-orange-600 text-sm mb-1 text-center">Volumen de uso (por rango de fechas)</h4>
+                <MapaVolumenUso cargadores={cargadores} volumenes={volumenesPorCargador} maxTop10={maxTop10} />
+                <div className="flex justify-center gap-2 mt-2 text-xs">
+                  <span className="inline-block w-3 h-3 rounded-full bg-green-500"></span> Bajo
+                  <span className="inline-block w-3 h-3 rounded-full bg-orange-400"></span> Medio
+                  <span className="inline-block w-3 h-3 rounded-full bg-red-600"></span> Alto
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sección Rentabilidad */}
       {tab==='rentabilidad' && (
         <Rentabilidad fetchSesiones={fetchSesionesByDateRange} />
