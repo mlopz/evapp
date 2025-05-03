@@ -1,0 +1,14 @@
+{
+  "UTE": {
+    "fijo": 121.9,
+    "variable": 10.8,
+    "factor": 0.7
+  },
+  "Mobility": {
+    "alta": 25,
+    "baja": 12.54
+  },
+  "eOne": {
+    "variable": 14.64
+  }
+}

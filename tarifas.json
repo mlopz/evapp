@@ -1,0 +1,11 @@
+[
+  {"Tensión": "Baja tensión", "Tarifa": "SG (Simple)", "Franja horaria": "Todo el día", "Precio estimado (UYU $/kWh)": 8.57, "Notas": "Tarifa sin discriminación horaria", "Tipo de precio": "Promedio diario"},
+  {"Tensión": "Media tensión", "Tarifa": "GDM (Media tensión)", "Franja horaria": "Todo el día", "Precio estimado (UYU $/kWh)": 6.5, "Notas": "Promedio ponderado considerando carga mixta", "Tipo de precio": "Promedio diario"},
+  {"Tensión": "Baja tensión", "Tarifa": "SDBH (Horaria)", "Franja horaria": "Punta (18–22 h)", "Precio estimado (UYU $/kWh)": 13.82, "Notas": "Horario más caro", "Tipo de precio": "Por franja horaria"},
+  {"Tensión": "Baja tensión", "Tarifa": "SDBH (Horaria)", "Franja horaria": "Llano (6–18 h, 22–24 h)", "Precio estimado (UYU $/kWh)": 6.93, "Notas": "Intermedio, uso típico comercial", "Tipo de precio": "Por franja horaria"},
+  {"Tensión": "Baja tensión", "Tarifa": "SDBH (Horaria)", "Franja horaria": "Valle (0–6 h)", "Precio estimado (UYU $/kWh)": 3.98, "Notas": "Ideal para carga nocturna", "Tipo de precio": "Por franja horaria"},
+  {"Tensión": "Media tensión", "Tarifa": "GDM (Media tensión)", "Franja horaria": "Punta", "Precio estimado (UYU $/kWh)": 10.5, "Notas": "Alta demanda en horario pico", "Tipo de precio": "Por franja horaria"},
+  {"Tensión": "Media tensión", "Tarifa": "GDM (Media tensión)", "Franja horaria": "Llano", "Precio estimado (UYU $/kWh)": 6.5, "Notas": "Promedio horario laboral", "Tipo de precio": "Por franja horaria"},
+  {"Tensión": "Media tensión", "Tarifa": "GDM (Media tensión)", "Franja horaria": "Valle", "Precio estimado (UYU $/kWh)": 3.5, "Notas": "Carga nocturna preferida", "Tipo de precio": "Por franja horaria"},
+  {"Tensión": "Media tensión", "Tarifa": "GMT (Grandes Usuarios)", "Franja horaria": "Valle (optimizado)", "Precio estimado (UYU $/kWh)": 3.2, "Notas": "Precio optimizado si se corrige reactiva y FP", "Tipo de precio": "Por franja horaria"}
+]

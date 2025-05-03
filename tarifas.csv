@@ -1,0 +1,10 @@
+Tensión,Tarifa,Franja horaria,Precio estimado (UYU $/kWh),Notas,Tipo de precio
+Baja tensión,SG (Simple),Todo el día,8.57,Tarifa sin discriminación horaria,Promedio diario
+Media tensión,GDM (Media tensión),Todo el día,6.5,Promedio ponderado considerando carga mixta,Promedio diario
+Baja tensión,SDBH (Horaria),Punta (18–22 h),13.82,Horario más caro,Por franja horaria
+Baja tensión,SDBH (Horaria),"Llano (6–18 h, 22–24 h)",6.93,"Intermedio, uso típico comercial",Por franja horaria
+Baja tensión,SDBH (Horaria),Valle (0–6 h),3.98,Ideal para carga nocturna,Por franja horaria
+Media tensión,GDM (Media tensión),Punta,10.5,Alta demanda en horario pico,Por franja horaria
+Media tensión,GDM (Media tensión),Llano,6.5,Promedio horario laboral,Por franja horaria
+Media tensión,GDM (Media tensión),Valle,3.5,Carga nocturna preferida,Por franja horaria
+Media tensión,GMT (Grandes Usuarios),Valle (optimizado),3.2,Precio optimizado si se corrige reactiva y FP,Por franja horaria

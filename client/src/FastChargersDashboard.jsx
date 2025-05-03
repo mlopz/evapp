@@ -235,22 +235,25 @@ export default function FastChargersDashboard() {
   return (
     <div className="max-w-3xl mx-auto py-8">
       <h2 className="text-3xl font-extrabold mb-8 text-center text-orange-700 drop-shadow">Cargadores rápidos - Estado actual</h2>
-      {/* Buscador en la parte superior */}
-      <div className="mb-6 flex justify-center">
-        <input
-          type="text"
-          className="w-full max-w-md px-4 py-2 border border-orange-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 text-lg shadow"
-          placeholder="Buscar cargador por nombre..."
-          value={buscador}
-          onChange={e => setBuscador(e.target.value)}
-        />
-      </div>
       {/* Tabs de navegación */}
       <div className="flex gap-4 mb-8 justify-center">
         <button onClick={()=>setTab('dashboard')} className={`px-4 py-2 rounded-t-lg font-semibold ${tab==='dashboard'?'bg-orange-200 text-orange-900':'bg-gray-100 text-gray-500'}`}>Dashboard</button>
         <button onClick={()=>setTab('estadisticas')} className={`px-4 py-2 rounded-t-lg font-semibold ${tab==='estadisticas'?'bg-orange-200 text-orange-900':'bg-gray-100 text-gray-500'}`}>Estadísticas</button>
         <button onClick={()=>setTab('rentabilidad')} className={`px-4 py-2 rounded-t-lg font-semibold ${tab==='rentabilidad'?'bg-orange-200 text-orange-900':'bg-gray-100 text-gray-500'}`}>Rentabilidad</button>
       </div>
+
+      {/* Buscador solo en Dashboard */}
+      {tab==='dashboard' && (
+        <div className="mb-6 flex justify-center">
+          <input
+            type="text"
+            className="w-full max-w-md px-4 py-2 border border-orange-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 text-lg shadow"
+            placeholder="Buscar cargador por nombre..."
+            value={buscador}
+            onChange={e => setBuscador(e.target.value)}
+          />
+        </div>
+      )}
 
       {/* Sección principal de cards de cargadores solo en Dashboard */}
       {tab==='dashboard' && (
