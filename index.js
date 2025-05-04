@@ -915,13 +915,8 @@ app.use((err, req, res, next) => {
 
 const { generateFastChargersJson } = require('./lib/generateFastChargers');
 
-// Endpoint protegido para regenerar fast_chargers.json
+// Endpoint público para regenerar fast_chargers.json
 app.post('/api/generate-fast-chargers', async (req, res) => {
-  // Protección simple por API key
-  const apiKey = req.headers['x-api-key'];
-  if (apiKey !== process.env.FAST_CHARGERS_API_KEY) {
-    return res.status(403).json({ error: 'Unauthorized' });
-  }
   try {
     const count = await generateFastChargersJson(pool);
     res.json({ ok: true, message: `Archivo fast_chargers.json generado con ${count} conectores rápidos.` });
