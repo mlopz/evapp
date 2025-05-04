@@ -927,7 +927,6 @@ app.get('/api/connector-sessions', async (req, res) => {
   }
 });
 
-const { insertMonitoringRecordSafe } = require('./monitoringRepository');
 insertMonitoringRecordSafe({
   charger_name: 'BACKEND',
   connector_type: null,
