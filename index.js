@@ -1,3 +1,12 @@
+process.on('uncaughtException', err => {
+  console.error('[FATAL] Excepción no capturada:', err);
+  process.exit(1);
+});
+process.on('unhandledRejection', err => {
+  console.error('[FATAL] Promesa no manejada:', err);
+  process.exit(1);
+});
+
 console.log('--- Backend iniciado: index.js ---');
 
 require('dotenv').config();
@@ -77,11 +86,9 @@ function updateConnectorsState(newChargers) {
       }
       const prev = connectorsState[chargerName][connectorId];
       const newState = connector.status;
-      // Log de auditoría: estado previo y nuevo
-      console.log(`[AUDITORÍA] Procesando conector: ${chargerName} | ${connectorId} | Estado previo: ${prev.state} | Estado nuevo: ${newState}`);
+      // Solo mostrar logs de auditoría si hay cambio de estado
       if (prev.state !== newState) {
-        // Cambio de estado detectado
-        console.log(`[AUDITORÍA] Cambio de estado detectado en ${chargerName} | ${connectorId}: ${prev.state} => ${newState}`);
+        console.log(`[AUDITORÍA] Cambio de estado: ${chargerName} | ${connectorId} de ${prev.state} a ${newState}`);
         const isFast = connectorId && shouldProcessConnector(connectorId);
         if (!isFast) {
           console.warn(`[AUDITORÍA] Conector ${connectorId} NO es rápido según fast_chargers.json. No se registra cambio.`);
@@ -793,7 +800,7 @@ function shouldProcessConnector(connectorId) {
 // --- MODIFICAR insertMonitoringRecordSafe PARA ACTUALIZAR HEARTBEAT SI YA EXISTE SESION ACTIVA ---
 async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp, reason = 'state_change' }) {
   // FILTRO: ignorar si no es rápido, solo si hay connector_id
-  if (connector_id && !shouldProcessConnector(connector_id)) return;
+  if (connector_id && !shouldProcessConnector(connectorId)) return;
   if (typeof power === 'string') power = parseFloat(power);
   // --- DEFENSIVO: asegurar timestamp en segundos ---
   if (typeof timestamp === 'number') {
@@ -876,13 +883,14 @@ app.get('/api/connector-sessions', async (req, res) => {
   }
 });
 
-insertMonitoringRecordSafe({
-  charger_name: 'BACKEND',
-  connector_type: null,
-  connector_id: null,
-  power: null,
-  status: 'backend_restart',
-  timestamp: Date.now(),
-  reason: 'backend_restart'
-});
-console.log('[AUDITORÍA] Evento backend_restart registrado en base de datos');
+// Solo log de auditoría global backend_restart, no por cada ciclo
+// insertMonitoringRecordSafe({
+//   charger_name: 'BACKEND',
+//   connector_type: null,
+//   connector_id: null,
+//   power: null,
+//   status: 'backend_restart',
+//   timestamp: Date.now(),
+//   reason: 'backend_restart'
+// });
+// console.log('[AUDITORÍA] Evento backend_restart registrado en base de datos');
