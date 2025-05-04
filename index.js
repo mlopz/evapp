@@ -800,7 +800,7 @@ function shouldProcessConnector(connectorId) {
 // --- MODIFICAR insertMonitoringRecordSafe PARA ACTUALIZAR HEARTBEAT SI YA EXISTE SESION ACTIVA ---
 async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp, reason = 'state_change' }) {
   // FILTRO: ignorar si no es rápido, solo si hay connector_id
-  if (connector_id && !shouldProcessConnector(connector_id)) return;
+  if (connector_id && !shouldProcessConnector(connectorId)) return;
   if (typeof power === 'string') power = parseFloat(power);
   // --- DEFENSIVO: asegurar timestamp en segundos ---
   if (typeof timestamp === 'number') {
@@ -912,3 +912,20 @@ app.use((err, req, res, next) => {
 //   reason: 'backend_restart'
 // });
 // console.log('[AUDITORÍA] Evento backend_restart registrado en base de datos');
+
+const { generateFastChargersJson } = require('./lib/generateFastChargers');
+
+// Endpoint protegido para regenerar fast_chargers.json
+app.post('/api/generate-fast-chargers', async (req, res) => {
+  // Protección simple por API key
+  const apiKey = req.headers['x-api-key'];
+  if (apiKey !== process.env.FAST_CHARGERS_API_KEY) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+  try {
+    const count = await generateFastChargersJson(pool);
+    res.json({ ok: true, message: `Archivo fast_chargers.json generado con ${count} conectores rápidos.` });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.toString() });
+  }
+});
