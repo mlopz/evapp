@@ -156,6 +156,7 @@ function getSessions(filter = {}) {
 }
 
 async function pollChargers() {
+  console.log(`[AUDITORÍA] Ejecutando pollChargers a las ${new Date().toLocaleString()}`);
   try {
     const res = await fetch(API_URL);
     const contentType = res.headers.get('content-type');
@@ -168,9 +169,13 @@ async function pollChargers() {
         console.error('Error al parsear JSON:', e);
       }
     }
-    // Procesar y guardar con connectorId
     chargersData = Array.isArray(data) ? processChargersWithConnectorId(data) : [];
-    if (chargersData.length > 0) updateConnectorsState(chargersData);
+    if (chargersData.length > 0) {
+      console.log(`[AUDITORÍA] pollChargers recibió ${chargersData.length} cargadores`);
+      updateConnectorsState(chargersData);
+    } else {
+      console.warn('[AUDITORÍA] pollChargers no recibió datos de cargadores');
+    }
     lastPollTimestamp = getNow();
   } catch (err) {
     console.error('Error consultando la API pública:', err);
@@ -921,3 +926,15 @@ app.get('/api/connector-sessions', async (req, res) => {
     res.status(500).json({ error: err.toString() });
   }
 });
+
+const { insertMonitoringRecordSafe } = require('./monitoringRepository');
+insertMonitoringRecordSafe({
+  charger_name: 'BACKEND',
+  connector_type: null,
+  connector_id: null,
+  power: null,
+  status: 'backend_restart',
+  timestamp: Date.now(),
+  reason: 'backend_restart'
+});
+console.log('[AUDITORÍA] Evento backend_restart registrado en base de datos');
