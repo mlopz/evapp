@@ -809,7 +809,19 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
       timestamp = Math.floor(timestamp / 1000);
     }
   }
-  // ... resto de la función sin cambios ...
+  // --- LLAMADA REAL A LA INSERCIÓN ---
+  console.log('[insertMonitoringRecordSafe] Insertando registro en monitoring:', {
+    charger_name, connector_type, connector_id, power, status, timestamp, reason
+  });
+  await insertMonitoringRecord({
+    charger_name,
+    connector_type,
+    connector_id,
+    power,
+    status,
+    timestamp,
+    reason
+  });
 }
 
 // --- Función robusta para convertir cualquier timestamp a string ISO seguro ---
