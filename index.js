@@ -107,11 +107,12 @@ function updateConnectorsState(newChargers) {
 }
 
 function logConnectorStates() {
-  console.log('--- Estado actual de connectorsState ---');
+  // console.log('--- Estado actual de connectorsState ---');
   for (const chargerName in connectorsState) {
     for (const connectorId in connectorsState[chargerName]) {
       const state = connectorsState[chargerName][connectorId];
-      console.log(`Charger: ${chargerName} | ConnectorId: ${connectorId} | Estado: ${state.state} | sessionStart: ${state.sessionStart} | accumulatedMinutes: ${state.accumulatedMinutes}`);
+      // Ocultado para limpiar logs: 
+      // console.log(`Charger: ${chargerName} | ConnectorId: ${connectorId} | Estado: ${state.state} | sessionStart: ${state.sessionStart} | accumulatedMinutes: ${state.accumulatedMinutes}`);
     }
   }
 }
