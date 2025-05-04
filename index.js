@@ -59,10 +59,6 @@ function processChargersWithConnectorId(rawChargers) {
 
 function updateConnectorsState(newChargers) {
   const now = getNow();
-  // Llamar a la rutina de verificación al inicio
-  // Si tienes una lista de cargadores esperados, pásala como segundo argumento
-  // Ejemplo: verificarMonitoreoCargadores(newChargers, ['Cargador1', 'Cargador2', ...]);
-  verificarMonitoreoCargadores(newChargers);
   for (const charger of newChargers) {
     const chargerName = charger.name;
     if (!connectorsState[chargerName]) connectorsState[chargerName] = {};
@@ -81,19 +77,26 @@ function updateConnectorsState(newChargers) {
       }
       const prev = connectorsState[chargerName][connectorId];
       const newState = connector.status;
-      // SOLO lógica de registro real, SIN cierre automático
-      // --- NUEVO: Detectar cierre de sesión ---
-      if (prev.state === 'Charging' && newState !== 'Charging') {
-        console.log(`[MONITORING] Detectado cierre de sesión: ${chargerName} | ${connectorId} | ${connector.type} | ${connector.power} | ${now}`);
+      // Log de auditoría: estado previo y nuevo
+      console.log(`[AUDITORÍA] Procesando conector: ${chargerName} | ${connectorId} | Estado previo: ${prev.state} | Estado nuevo: ${newState}`);
+      if (prev.state !== newState) {
+        // Cambio de estado detectado
+        console.log(`[AUDITORÍA] Cambio de estado detectado en ${chargerName} | ${connectorId}: ${prev.state} => ${newState}`);
+        const isFast = connectorId && shouldProcessConnector(connectorId);
+        if (!isFast) {
+          console.warn(`[AUDITORÍA] Conector ${connectorId} NO es rápido según fast_chargers.json. No se registra cambio.`);
+        } else {
+          console.log(`[AUDITORÍA] Registrando cambio de estado en BD para ${chargerName} | ${connectorId} | Estado: ${newState}`);
+        }
         insertMonitoringRecordSafe({
           charger_name: chargerName,
           connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId).type,
           connector_id: connectorId,
           power: connector.power,
-          status: 'SessionEnded',
+          status: newState,
           timestamp: now,
-          reason: 'session_end'
-        }).catch(err => console.error('Error insertando SessionEnded:', err));
+          reason: 'state_change'
+        }).catch(err => console.error('Error insertando cambio de estado:', err));
       }
       prev.lastState = prev.state;
       prev.state = newState;
@@ -789,7 +792,7 @@ function shouldProcessConnector(connectorId) {
 // --- MODIFICAR insertMonitoringRecordSafe PARA ACTUALIZAR HEARTBEAT SI YA EXISTE SESION ACTIVA ---
 async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp, reason = 'state_change' }) {
   // FILTRO: ignorar si no es rápido, solo si hay connector_id
-  if (connector_id && !shouldProcessConnector(connector_id)) return;
+  if (connector_id && !shouldProcessConnector(connectorId)) return;
   if (typeof power === 'string') power = parseFloat(power);
   // --- DEFENSIVO: asegurar timestamp en segundos ---
   if (typeof timestamp === 'number') {
@@ -861,8 +864,10 @@ async function insertMonitoringRecordSafe({ charger_name, connector_type, connec
 function toISODateSafe(ts) {
   if (typeof ts === 'number') {
     // Si es muy grande, probablemente milisegundos
-    if (ts > 1e12) ts = Math.floor(ts / 1000);
-    return new Date(ts * 1000).toISOString();
+    if (ts > 1e12) {
+      // Si viene en milisegundos, pasar a segundos
+      ts = Math.floor(ts / 1000);
+    }
   }
   if (typeof ts === 'string') {
     const d = new Date(ts);
