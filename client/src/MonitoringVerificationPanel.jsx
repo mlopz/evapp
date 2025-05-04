@@ -11,16 +11,23 @@ export default function MonitoringVerificationPanel() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch("/api/monitoring-verification");
+        const res = await fetch("/api/monitoring-verification", { cache: "no-store" });
         if (!res.ok) throw new Error("No hay datos de verificación disponibles");
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          const text = await res.text();
+          throw new Error("Respuesta no es JSON: " + text.slice(0, 200));
+        }
         const json = await res.json();
         setData(json);
+        console.log('[MonitoringVerificationPanel] Valor crudo de timestamp:', json.timestamp);
       } catch (e) {
-        setError(e.message);
+        setError(
+          (e && e.stack) ? e.stack : (typeof e === 'object' ? JSON.stringify(e) : String(e))
+        );
         setData(null);
       } finally {
         setLoading(false);
-        // Refresca cada 30 segundos
         timeout = setTimeout(fetchData, 30000);
       }
     }
@@ -28,8 +35,23 @@ export default function MonitoringVerificationPanel() {
     return () => clearTimeout(timeout);
   }, []);
 
+  function renderFechaSeguro(fecha) {
+    try {
+      if (!fecha) return "-";
+      if (typeof fecha === "number") {
+        const ms = fecha > 1e12 ? fecha : fecha * 1000;
+        return new Date(ms).toLocaleString();
+      }
+      const ms = Date.parse(fecha);
+      if (!isNaN(ms)) return new Date(ms).toLocaleString();
+      return "(fecha inválida)";
+    } catch (e) {
+      return "(fecha inválida)";
+    }
+  }
+
   if (loading) return <div className="my-4">Cargando verificación de monitoreo...</div>;
-  if (error) return <div className="my-4 text-red-600">{error}</div>;
+  if (error) return <div className="my-4 text-red-600">ERROR VERIFICACIÓN MONITOREO: {error}</div>;
   if (!data) return null;
 
   return (
@@ -66,7 +88,10 @@ export default function MonitoringVerificationPanel() {
           </ul>
         </div>
       )}
-      <div className="text-xs text-gray-500 mt-2">Última actualización: {new Date(data.timestamp * 1000).toLocaleString()}</div>
+      <div className="text-xs text-gray-500 mt-2">
+        Última actualización: {renderFechaSeguro(data.timestamp)}<br />
+        <span className="text-orange-600">Valor crudo: {String(data.timestamp)}</span>
+      </div>
     </div>
   );
 }

@@ -91,6 +91,22 @@ function getMaxTop10(volumenes) {
   return top10.length > 0 ? top10[0] : 1;
 }
 
+// Utilidad para renderizar fecha de manera segura
+function renderFechaSeguro(fecha) {
+  try {
+    if (!fecha) return "-";
+    if (typeof fecha === "number") {
+      const ms = fecha > 1e12 ? fecha : fecha * 1000;
+      return new Date(ms).toLocaleString();
+    }
+    const ms = Date.parse(fecha);
+    if (!isNaN(ms)) return new Date(ms).toLocaleString();
+    return "(fecha inválida)";
+  } catch (e) {
+    return "(fecha inválida)";
+  }
+}
+
 export default function FastChargersDashboard() {
   const [cargadores, setCargadores] = useState([]);
   const [estadoSeleccionado, setEstadoSeleccionado] = useState(null);
@@ -554,7 +570,7 @@ export default function FastChargersDashboard() {
             <ul className="list-disc ml-5">
               {incidentesBackend.map(inc => (
                 <li key={inc.id} className="mb-1">
-                  <span className="font-semibold text-orange-600">[{new Date(inc.timestamp).toLocaleString()}]</span> <span className="font-bold">{inc.type}</span> <span className="text-gray-500">{inc.details}</span>
+                  <span className="font-semibold text-orange-600">[{renderFechaSeguro(inc.timestamp)}]</span> <span className="font-bold">{inc.type}</span> <span className="text-gray-500">{inc.details}</span>
                 </li>
               ))}
             </ul>
