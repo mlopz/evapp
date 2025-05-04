@@ -279,7 +279,7 @@ function closeAndOpenChargingSessionsOnStartup() {
         if (state.sessionStart) {
           insertMonitoringRecordSafe({
             charger_name: chargerName,
-            connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId).type,
+            connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId)?.type,
             connector_id: connectorId,
             power: null,
             status: 'SessionEnded',
@@ -294,9 +294,9 @@ function closeAndOpenChargingSessionsOnStartup() {
         state.sessionStart = now;
         insertMonitoringRecordSafe({
           charger_name: chargerName,
-          connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId).type,
+          connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId)?.type,
           connector_id: connectorId,
-          power: null,
+          power: state.power || null,
           status: 'Charging',
           timestamp: now,
           reason: 'backend_restart'
