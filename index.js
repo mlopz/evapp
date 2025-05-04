@@ -800,7 +800,7 @@ function shouldProcessConnector(connectorId) {
 // --- MODIFICAR insertMonitoringRecordSafe PARA ACTUALIZAR HEARTBEAT SI YA EXISTE SESION ACTIVA ---
 async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp, reason = 'state_change' }) {
   // FILTRO: ignorar si no es rápido, solo si hay connector_id
-  if (connector_id && !shouldProcessConnector(connector_id)) return;
+  if (connector_id && !shouldProcessConnector(connectorId)) return;
   if (typeof power === 'string') power = parseFloat(power);
   // --- DEFENSIVO: asegurar timestamp en segundos ---
   if (typeof timestamp === 'number') {
@@ -881,6 +881,12 @@ app.get('/api/connector-sessions', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.toString() });
   }
+});
+
+// Middleware global de manejo de errores en Express
+app.use((err, req, res, next) => {
+  console.error('[EXPRESS ERROR]', err);
+  res.status(500).json({ error: 'Error interno del servidor', details: err.message });
 });
 
 // Solo log de auditoría global backend_restart, no por cada ciclo
