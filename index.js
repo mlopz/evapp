@@ -59,6 +59,10 @@ function processChargersWithConnectorId(rawChargers) {
 
 function updateConnectorsState(newChargers) {
   const now = getNow();
+  // Llamar a la rutina de verificación al inicio
+  // Si tienes una lista de cargadores esperados, pásala como segundo argumento
+  // Ejemplo: verificarMonitoreoCargadores(newChargers, ['Cargador1', 'Cargador2', ...]);
+  verificarMonitoreoCargadores(newChargers);
   for (const charger of newChargers) {
     const chargerName = charger.name;
     if (!connectorsState[chargerName]) connectorsState[chargerName] = {};
@@ -72,8 +76,7 @@ function updateConnectorsState(newChargers) {
           lastState: null,
           lastUpdate: now,
           accumulatedMinutes: 0,
-          accumulatedMinutesDisplay: 0,
-          sessionStart: null
+          sessionStart: null,
         };
       }
       const prev = connectorsState[chargerName][connectorId];
@@ -84,7 +87,7 @@ function updateConnectorsState(newChargers) {
         console.log(`[MONITORING] Detectado cierre de sesión: ${chargerName} | ${connectorId} | ${connector.type} | ${connector.power} | ${now}`);
         insertMonitoringRecordSafe({
           charger_name: chargerName,
-          connector_type: connector.type,
+          connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId).type,
           connector_id: connectorId,
           power: connector.power,
           status: 'SessionEnded',
@@ -173,6 +176,73 @@ async function pollChargers() {
     console.error('Error consultando la API pública:', err);
   }
 }
+
+// --- Variable global para el último resultado de verificación ---
+let lastMonitoringVerification = null;
+
+// --- Rutina de verificación de monitoreo ---
+function verificarMonitoreoCargadores(newChargers, expectedChargers = []) {
+  const now = getNow();
+  // A. Loguear el total de cargadores y conectores procesados
+  const cargadoresRecibidos = newChargers.length;
+  let totalConectores = 0;
+  const detalleCargadores = [];
+  newChargers.forEach(charger => {
+    const count = (charger.connectors || []).length;
+    totalConectores += count;
+    detalleCargadores.push({ name: charger.name, conectores: count });
+  });
+
+  // B. Detectar cargadores faltantes
+  let faltantes = [];
+  if (expectedChargers.length > 0) {
+    const receivedNames = newChargers.map(c => c.name);
+    faltantes = expectedChargers.filter(name => !receivedNames.includes(name));
+  }
+
+  // C. Detectar conectores inactivos
+  const conectoresInactivos = [];
+  for (const chargerName in connectorsState) {
+    for (const connectorId in connectorsState[chargerName]) {
+      const state = connectorsState[chargerName][connectorId];
+      const minutosSinCambio = (now - state.lastUpdate) / 60;
+      if (minutosSinCambio > 120) { // 2 horas sin cambio
+        conectoresInactivos.push({
+          chargerName,
+          connectorId,
+          minutosSinCambio: minutosSinCambio.toFixed(1)
+        });
+      }
+    }
+  }
+
+  // Guardar el resultado global
+  lastMonitoringVerification = {
+    timestamp: now,
+    cargadoresRecibidos,
+    totalConectores,
+    detalleCargadores,
+    faltantes,
+    conectoresInactivos
+  };
+
+  // Logs para consola
+  console.log(`[MONITORING-VERIFICACION] Cargadores recibidos: ${cargadoresRecibidos}`);
+  detalleCargadores.forEach(c => console.log(`[MONITORING-VERIFICACION] ${c.name}: ${c.conectores} conectores`));
+  console.log(`[MONITORING-VERIFICACION] Total conectores procesados: ${totalConectores}`);
+  if (faltantes.length > 0) {
+    console.warn(`[MONITORING-VERIFICACION] FALTAN cargadores: ${faltantes.join(', ')}`);
+  }
+  conectoresInactivos.forEach(c => console.warn(`[MONITORING-VERIFICACION] Conector inactivo hace ${c.minutosSinCambio} minutos: ${c.chargerName} | ${c.connectorId}`));
+}
+
+// --- Endpoint para exponer el resultado de verificación ---
+app.get('/api/monitoring-verification', (req, res) => {
+  if (!lastMonitoringVerification) {
+    return res.status(404).json({ error: 'Aún no hay datos de verificación.' });
+  }
+  res.json(lastMonitoringVerification);
+});
 
 // --- Al iniciar el backend: sincronizar estado antes de cerrar/abrir sesiones ---
 async function syncAndCloseAndOpenChargingSessionsOnStartup() {
@@ -735,7 +805,7 @@ function shouldProcessConnector(connectorId) {
 // --- MODIFICAR insertMonitoringRecordSafe PARA ACTUALIZAR HEARTBEAT SI YA EXISTE SESION ACTIVA ---
 async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp, reason = 'state_change' }) {
   // FILTRO: ignorar si no es rápido
-  if (!shouldProcessConnector(connector_id)) return;
+  if (!shouldProcessConnector(connectorId)) return;
   if (typeof power === 'string') power = parseFloat(power);
   // --- DEFENSIVO: asegurar timestamp en segundos ---
   if (typeof timestamp === 'number') {

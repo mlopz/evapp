@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MapaZonasInfluencia, MapaVolumenUso } from './MapasCargadores';
 import Rentabilidad from './Rentabilidad';
+import MonitoringVerificationPanel from './MonitoringVerificationPanel';
 
 const ESTADOS = [
   { key: 'Disponible', label: 'Disponible', color: 'from-orange-400 to-orange-500', icon: (
@@ -234,6 +235,7 @@ export default function FastChargersDashboard() {
 
   return (
     <div className="max-w-3xl mx-auto py-8">
+      <MonitoringVerificationPanel />
       <h2 className="text-3xl font-extrabold mb-8 text-center text-orange-700 drop-shadow">Cargadores rápidos - Estado actual</h2>
       {/* Tabs de navegación */}
       <div className="flex gap-4 mb-8 justify-center">

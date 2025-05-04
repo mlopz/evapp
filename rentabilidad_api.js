@@ -133,8 +133,8 @@ router.post('/api/rentabilidad', async (req, res) => {
     // Cargar archivos de criterios
     const costos = JSON.parse(fs.readFileSync(COSTOS_PATH, 'utf8'));
     const tarifas = JSON.parse(fs.readFileSync(TARIFAS_PATH, 'utf8'));
-    // Buscar tarifa seleccionada
-    const tarifa = tarifas.find(t => t.Tarifa === tarifaSeleccionada);
+    // Buscar tarifa seleccionada por id (no por campo "Tarifa")
+    const tarifa = tarifas.find(t => t.id === tarifaSeleccionada);
     if (!tarifa) return res.status(400).json({ error: 'Tarifa no encontrada' });
     // Filtrar sesiones por rango de fechas
     const sesionesFiltradas = sesiones.filter(s => {

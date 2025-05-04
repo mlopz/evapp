@@ -1,0 +1,34 @@
+[
+  {
+    "id": "residencial",
+    "nombre": "Residencial",
+    "descripcion": "Tarifa para hogares. Precio único todo el día.",
+    "precios": [{ "hora_inicio": 0, "hora_fin": 24, "precio": 8.5 }]
+  },
+  {
+    "id": "comercial",
+    "nombre": "Comercial",
+    "descripcion": "Tarifa para comercios. Precio único todo el día.",
+    "precios": [{ "hora_inicio": 0, "hora_fin": 24, "precio": 10.2 }]
+  },
+  {
+    "id": "industrial",
+    "nombre": "Industrial",
+    "descripcion": "Tarifa industrial. Precio variable según la hora.",
+    "precios": [
+      { "hora_inicio": 0, "hora_fin": 7, "precio": 7.0 },
+      { "hora_inicio": 7, "hora_fin": 18, "precio": 12.0 },
+      { "hora_inicio": 18, "hora_fin": 24, "precio": 9.0 }
+    ]
+  },
+  {
+    "id": "especial",
+    "nombre": "Especial",
+    "descripcion": "Tarifa especial. Precio variable según la hora.",
+    "precios": [
+      { "hora_inicio": 0, "hora_fin": 8, "precio": 6.5 },
+      { "hora_inicio": 8, "hora_fin": 20, "precio": 14.0 },
+      { "hora_inicio": 20, "hora_fin": 24, "precio": 8.0 }
+    ]
+  }
+]
