@@ -239,8 +239,10 @@ function verificarMonitoreoCargadores(newChargers, expectedChargers = []) {
 // --- Endpoint para exponer el resultado de verificación ---
 app.get('/api/monitoring-verification', (req, res) => {
   if (!lastMonitoringVerification) {
+    // Siempre responde JSON, nunca vacío ni HTML
     return res.status(404).json({ error: 'Aún no hay datos de verificación.' });
   }
+  res.set('Content-Type', 'application/json');
   res.json(lastMonitoringVerification);
 });
 
