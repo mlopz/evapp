@@ -788,28 +788,27 @@ function shouldProcessConnector(connectorId) {
 
 // --- MODIFICAR insertMonitoringRecordSafe PARA ACTUALIZAR HEARTBEAT SI YA EXISTE SESION ACTIVA ---
 async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp, reason = 'state_change' }) {
-  // FILTRO: ignorar si no es rápido
-  if (!shouldProcessConnector(connectorId)) return;
+  // FILTRO: ignorar si no es rápido, solo si hay connector_id
+  if (connector_id && !shouldProcessConnector(connector_id)) return;
   if (typeof power === 'string') power = parseFloat(power);
   // --- DEFENSIVO: asegurar timestamp en segundos ---
   if (typeof timestamp === 'number') {
     if (timestamp > 1e12) {
       // Si viene en milisegundos, pasar a segundos
       timestamp = Math.floor(timestamp / 1000);
-    } else if (timestamp > 1e10) {
-      // Si es un número muy grande pero menor a 1e12, probablemente error de conversión
-      console.warn('[insertMonitoringRecordSafe] Timestamp sospechoso:', timestamp);
-      timestamp = Math.floor(timestamp / 1000);
     }
-  } else {
+  } else if (typeof timestamp === 'string') {
     // Si viene como string, intentar parsear
-    const tNum = Number(timestamp);
-    if (!isNaN(tNum)) {
-      timestamp = tNum > 1e12 ? Math.floor(tNum / 1000) : Math.floor(tNum);
+    const parsed = Date.parse(timestamp);
+    if (!isNaN(parsed)) {
+      timestamp = Math.floor(parsed / 1000);
     } else {
       console.warn('[insertMonitoringRecordSafe] Timestamp no numérico:', timestamp);
       return;
     }
+  } else {
+    console.warn('[insertMonitoringRecordSafe] Timestamp no numérico:', timestamp);
+    return;
   }
   // Guardar en charger_monitoring como log histórico SOLO si es rápido
   await insertMonitoringRecord({ charger_name, connector_type, connector_id, power, status, timestamp, reason });
