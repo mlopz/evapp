@@ -326,15 +326,6 @@ app.get('/api/chargers', (req, res) => {
 // --- ENDPOINT TEMPORAL: Listar sesiones para frontend ---
 app.get('/api/sessions', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM connector_sessions ORDER BY session_start DESC');
-    res.json({ sessions: rows });
-  } catch (err) {
-    res.status(500).json({ error: 'Error obteniendo sesiones' });
-  }
-});
-
-app.get('/api/sessions', async (req, res) => {
-  try {
     const { chargerName, connectorId } = req.query;
     let query = 'SELECT * FROM connector_sessions WHERE 1=1';
     const params = [];
@@ -552,20 +543,6 @@ app.get('/api/connector-sessions/summary', async (req, res) => {
   } catch (err) {
     console.error('[connector-sessions/summary] Error:', err);
     res.status(500).json({ error: 'Error obteniendo resumen de sesiones' });
-  }
-});
-
-// --- Endpoint resumen de connector_sessions ---
-app.get('/api/connector-sessions/summary', async (req, res) => {
-  try {
-    const { rows: countRows } = await pool.query('SELECT COUNT(*)::int AS total FROM connector_sessions');
-    const { rows: sampleRows } = await pool.query('SELECT * FROM connector_sessions ORDER BY session_start DESC LIMIT 5');
-    res.json({
-      total: countRows[0]?.total || 0,
-      samples: sampleRows
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
   }
 });
 
