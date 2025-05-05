@@ -1009,11 +1009,22 @@ app.use((err, req, res, next) => {
 async function verificarEstadoRespaldo(chargerName, connectorType) {
   try {
     const res = await fetch('https://cargadoresuy-functions-bfefr5ygxa-uc.a.run.app/stations');
-    const json = await res.json();
+    if (!res.ok) {
+      const text = await res.text();
+      console.error(`[RESPLADO] Error HTTP consultando API de respaldo: ${res.status} ${res.statusText}. Respuesta: ${text}`);
+      return null;
+    }
+    let json;
+    try {
+      json = await res.json();
+    } catch (parseErr) {
+      const raw = await res.text();
+      console.error('[RESPLADO] Error parseando JSON de respaldo:', parseErr, 'Respuesta recibida:', raw);
+      return null;
+    }
     if (!json.data) return null;
-    // Normalizar nombre y tipo de conector
+    // Normalización básica: compara por nombre y tipo de conector
     const match = json.data.find(station => {
-      // Normalización básica: compara por nombre y tipo de conector
       return (
         station.name.trim().toLowerCase() === chargerName.trim().toLowerCase() &&
         (station.connectorType || '').trim().toLowerCase() === (connectorType || '').trim().toLowerCase()
@@ -1165,7 +1176,19 @@ async function doubleCheckConnectorsOnStartup() {
   let respaldoData = [];
   try {
     const res = await fetch('https://cargadoresuy-functions-bfefr5ygxa-uc.a.run.app/stations');
-    const json = await res.json();
+    if (!res.ok) {
+      const text = await res.text();
+      console.error(`[STARTUP] Error HTTP consultando API de respaldo: ${res.status} ${res.statusText}. Respuesta: ${text}`);
+      return;
+    }
+    let json;
+    try {
+      json = await res.json();
+    } catch (parseErr) {
+      const raw = await res.text();
+      console.error('[STARTUP] Error parseando JSON de respaldo:', parseErr, 'Respuesta recibida:', raw);
+      return;
+    }
     respaldoData = json.data || [];
   } catch (err) {
     console.error('[STARTUP] Error consultando API de respaldo:', err);
