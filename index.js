@@ -30,8 +30,8 @@ const POLL_INTERVAL = 30 * 1000; // 30 segundos
 // --- Estructuras en memoria ---
 let chargersData = [];
 let lastPollTimestamp = null;
-let connectorsState = {}; // { chargerName: { connectorId: { state, lastState, lastUpdate, accumulatedMinutes, sessionStart } } }
-let sessions = []; // [{ chargerName, connectorId, start, end, durationMinutes }]
+let connectorsState = {}; // { chargerName: { connector_id: { state, lastState, lastUpdate, accumulatedMinutes, sessionStart } } }
+let sessions = []; // [{ chargerName, connector_id, start, end, durationMinutes }]
 
 function getNow() {
   // Siempre retorna segundos (entero)
@@ -53,10 +53,10 @@ function processChargersWithConnectorId(rawChargers) {
   return rawChargers.map(charger => {
     const chargerName = charger.name;
     const connectors = (charger.cnns || []).map((connector, idx) => {
-      const connectorId = `${chargerName}-${connector.type}-${idx}`;
+      const connector_id = `${chargerName}-${connector.type}-${idx}`;
       return {
         ...connector,
-        connectorId,
+        connector_id,
       };
     });
     return {
@@ -72,42 +72,44 @@ function updateConnectorsState(newChargers) {
     const chargerName = charger.name;
     if (!connectorsState[chargerName]) connectorsState[chargerName] = {};
     (charger.connectors || []).forEach((connector, connectorIndex) => {
-      const connectorId = connector.connectorId || `${chargerName}-${connector.type}-${connectorIndex}`;
+      const connector_id = connector.connector_id || `${chargerName}-${connector.type}-${connectorIndex}`;
       // IGNORAR CARGADORES LENTOS
-      if (!shouldProcessConnector(connectorId)) return;
-      if (!connectorsState[chargerName][connectorId]) {
-        connectorsState[chargerName][connectorId] = {
+      if (!shouldProcessConnector(connector_id)) return;
+      if (!connectorsState[chargerName][connector_id]) {
+        connectorsState[chargerName][connector_id] = {
           state: connector.status,
           lastState: null,
           lastUpdate: now,
           accumulatedMinutes: 0,
           sessionStart: null,
+          connector_type: connector.type,
         };
       }
-      const prev = connectorsState[chargerName][connectorId];
+      const prev = connectorsState[chargerName][connector_id];
       const newState = connector.status;
       // Solo mostrar logs de auditoría si hay cambio de estado
       if (prev.state !== newState) {
-        console.log(`[AUDITORÍA] Cambio de estado: ${chargerName} | ${connectorId} de ${prev.state} a ${newState}`);
-        const isFast = connectorId && shouldProcessConnector(connectorId);
+        console.log(`[AUDITORÍA] Cambio de estado: ${chargerName} | ${connector_id} de ${prev.state} a ${newState}`);
+        const isFast = connector_id && shouldProcessConnector(connector_id);
         if (!isFast) {
-          console.warn(`[AUDITORÍA] Conector ${connectorId} NO es rápido según fast_chargers.json. No se registra cambio.`);
+          console.warn(`[AUDITORÍA] Conector ${connector_id} NO es rápido según fast_chargers.json. No se registra cambio.`);
         } else {
-          console.log(`[AUDITORÍA] Registrando cambio de estado en BD para ${chargerName} | ${connectorId} | Estado: ${newState}`);
+          console.log(`[AUDITORÍA] Registrando cambio de estado en BD para ${chargerName} | ${connector_id} | Estado: ${newState}`);
         }
         insertMonitoringRecordSafe({
           charger_name: chargerName,
-          connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId).type,
-          connector_id: connectorId,
-          power: connector.power,
+          connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connector_id === connector_id).type,
+          connector_id,
+          power: connector.power || null,
           status: newState,
           timestamp: now,
-          reason: 'state_change'
+          reason: 'api_principal'
         }).catch(err => console.error('Error insertando cambio de estado:', err));
       }
       prev.lastState = prev.state;
       prev.state = newState;
       prev.lastUpdate = now;
+      prev.connector_type = connector.type;
     });
   }
   logConnectorStates();
@@ -116,10 +118,10 @@ function updateConnectorsState(newChargers) {
 function logConnectorStates() {
   // console.log('--- Estado actual de connectorsState ---');
   for (const chargerName in connectorsState) {
-    for (const connectorId in connectorsState[chargerName]) {
-      const state = connectorsState[chargerName][connectorId];
+    for (const connector_id in connectorsState[chargerName]) {
+      const state = connectorsState[chargerName][connector_id];
       // Ocultado para limpiar logs: 
-      // console.log(`Charger: ${chargerName} | ConnectorId: ${connectorId} | Estado: ${state.state} | sessionStart: ${state.sessionStart} | accumulatedMinutes: ${state.accumulatedMinutes}`);
+      // console.log(`Charger: ${chargerName} | ConnectorId: ${connector_id} | Estado: ${state.state} | sessionStart: ${state.sessionStart} | accumulatedMinutes: ${state.accumulatedMinutes}`);
     }
   }
 }
@@ -128,12 +130,12 @@ function getChargersWithAccumulated() {
   return chargersData.map(charger => {
     const chargerName = charger.name;
     const connectors = (charger.connectors || []).map(connector => {
-      const connectorId = connector.connectorId;
-      const stateObj = connectorsState[chargerName]?.[connectorId] || {};
+      const connector_id = connector.connector_id;
+      const stateObj = connectorsState[chargerName]?.[connector_id] || {};
       return {
         ...connector,
-        accumulatedMinutes: stateObj.accumulatedMinutesDisplay || 0,
-        state: stateObj.state || connector.status,
+        connector_id,
+        ...stateObj
       };
     });
     return {
@@ -146,13 +148,13 @@ function getChargersWithAccumulated() {
 function getSessions(filter = {}) {
   let allSessions = [...sessions];
   for (const chargerName in connectorsState) {
-    for (const connectorId in connectorsState[chargerName]) {
-      const state = connectorsState[chargerName][connectorId];
+    for (const connector_id in connectorsState[chargerName]) {
+      const state = connectorsState[chargerName][connector_id];
       if (state.state === 'Charging' && state.sessionStart) {
         allSessions.unshift({
           chargerName,
-          connectorId,
-          connectorType: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId).type,
+          connector_id,
+          connectorType: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connector_id === connector_id).type,
           start: state.sessionStart,
           end: null,
           durationMinutes: minutesBetween(state.sessionStart, getNow()),
@@ -369,15 +371,15 @@ function closeAndOpenChargingSessionsOnStartup() {
   let closed = 0;
   let opened = 0;
   for (const chargerName in connectorsState) {
-    for (const connectorId in connectorsState[chargerName]) {
-      const state = connectorsState[chargerName][connectorId];
+    for (const connector_id in connectorsState[chargerName]) {
+      const state = connectorsState[chargerName][connector_id];
       if (state.state === 'Charging') {
         // Si hay una sesión previa abierta, cerrarla
         if (state.sessionStart) {
           insertMonitoringRecordSafe({
             charger_name: chargerName,
-            connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId)?.type,
-            connector_id: connectorId,
+            connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connector_id === connector_id)?.type,
+            connector_id,
             power: null,
             status: 'SessionEnded',
             timestamp: now,
@@ -391,8 +393,8 @@ function closeAndOpenChargingSessionsOnStartup() {
         state.sessionStart = now;
         insertMonitoringRecordSafe({
           charger_name: chargerName,
-          connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connectorId === connectorId)?.type,
-          connector_id: connectorId,
+          connector_type: getChargersWithAccumulated().find(c => c.name === chargerName).connectors.find(conn => conn.connector_id === connector_id)?.type,
+          connector_id,
           power: state.power || null,
           status: 'Charging',
           timestamp: now,
@@ -434,15 +436,15 @@ app.get('/api/chargers', (req, res) => {
 // --- ENDPOINT TEMPORAL: Listar sesiones para frontend ---
 app.get('/api/sessions', async (req, res) => {
   try {
-    const { chargerName, connectorId } = req.query;
+    const { chargerName, connector_id } = req.query;
     let query = 'SELECT * FROM connector_sessions WHERE 1=1';
     const params = [];
     if (chargerName) {
       params.push(chargerName);
       query += ` AND charger_name = $${params.length}`;
     }
-    if (connectorId) {
-      params.push(connectorId);
+    if (connector_id) {
+      params.push(connector_id);
       query += ` AND connector_id = $${params.length}`;
     }
     query += ' ORDER BY charger_name, connector_id, session_start';
@@ -680,7 +682,7 @@ app.get('/api/chargers/export', async (req, res) => {
       (charger.connectors || []).map(conn => ({
         charger_name: charger.name,
         charger_location: charger.location || '',
-        connector_id: conn.connectorId,
+        connector_id: conn.connector_id,
         connector_type: conn.type,
         power: conn.power,
         status: conn.status
@@ -786,12 +788,12 @@ app.get('/api/fast-chargers/status', async (req, res) => {
     const result = [];
     for (const charger of chargersData) {
       for (const conn of (charger.connectors || [])) {
-        const connectorId = conn.connectorId || `${charger.name}-${conn.type}-${conn.index || 0}`;
-        if (fastConnectorIds.has(connectorId)) {
+        const connector_id = conn.connector_id || `${charger.name}-${conn.type}-${conn.index || 0}`;
+        if (fastConnectorIds.has(connector_id)) {
           result.push({
-            connector_id: connectorId,
+            connector_id,
             charger_name: charger.name,
-            estado: conn.status || (connectorsState[charger.name]?.[connectorId]?.state) || 'Desconocido',
+            estado: conn.status || (connectorsState[charger.name]?.[connector_id]?.state) || 'Desconocido',
             power: conn.power,
             connector_type: conn.type,
             lat: charger.latitude || (charger.location && charger.location.latitude) || null,
@@ -883,14 +885,14 @@ try {
   console.error('[FAST CHARGERS] Error al cargar fast_chargers.json:', err);
 }
 
-function shouldProcessConnector(connectorId) {
-  return fastConnectorIds.has(connectorId);
+function shouldProcessConnector(connector_id) {
+  return fastConnectorIds.has(connector_id);
 }
 
 // --- MODIFICAR insertMonitoringRecordSafe PARA ACTUALIZAR HEARTBEAT SI YA EXISTE SESION ACTIVA ---
 async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp, reason = 'state_change' }) {
   // FILTRO: ignorar si no es rápido, solo si hay connector_id
-  if (connector_id && !shouldProcessConnector(connectorId)) return;
+  if (connector_id && !shouldProcessConnector(connector_id)) return;
   if (typeof power === 'string') power = parseFloat(power);
   // --- DEFENSIVO: asegurar timestamp en segundos ---
   if (typeof timestamp === 'number') {
