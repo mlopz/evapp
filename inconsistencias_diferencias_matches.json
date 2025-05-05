@@ -1,0 +1,1819 @@
+[
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-3",
+      "charger_name": "Palacio de la Luz - Aguilar",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Busy",
+      "latitude": -34.885144,
+      "longitude": -56.195179,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Mobility - Open Mall-GBT-60-0",
+      "charger_name": "Mobility - Open Mall",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.9419998,
+      "longitude": -54.9361389,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-7",
+      "charger_name": "ANCAP Colonia del Sacramento",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Unavaliable",
+      "latitude": -34.471664,
+      "longitude": -57.841764,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-8",
+      "charger_name": "Estación Península",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Error",
+      "latitude": -34.967524,
+      "longitude": -54.951832,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE ANCAP América Tacuarembó-CCS 2-60-0",
+      "charger_name": "UTE ANCAP América Tacuarembó",
+      "connector_type": "CCS 2",
+      "power": 60,
+      "provider": "UTE",
+      "status": "Charging",
+      "latitude": -31.7262242,
+      "longitude": -55.9718609,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-11",
+      "charger_name": "ANCAP Chuy",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -33.694694,
+      "longitude": -53.455267,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-15",
+      "charger_name": "Electrolinera Leguizamón",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.896317,
+      "longitude": -56.140618,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE Electrolinera Leguizamón-CCS 2-300-2",
+      "charger_name": "UTE Electrolinera Leguizamón",
+      "connector_type": "CCS 2",
+      "power": 300,
+      "provider": "UTE",
+      "status": "Charging",
+      "latitude": -34.896317,
+      "longitude": -56.140618,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-24",
+      "charger_name": "ANCAP La Radial",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Busy",
+      "latitude": -34.559155,
+      "longitude": -56.744655,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-26",
+      "charger_name": "ANCAP Rosario",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Unavaliable",
+      "latitude": -34.322365,
+      "longitude": -57.349989,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-27",
+      "charger_name": "ANCAP Rocha",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.496353,
+      "longitude": -54.327217,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-28",
+      "charger_name": "ANCAP San Luis",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.77033,
+      "longitude": -55.576509,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-81",
+      "charger_name": "UTEC Durazno",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -33.387208,
+      "longitude": -56.51478,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-101",
+      "charger_name": "Parque Santa Teresa",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.002017,
+      "longitude": -53.552156,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-64",
+      "charger_name": "ANCAP Carmelo",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -33.986462,
+      "longitude": -58.282765,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-162",
+      "charger_name": "ANCAP Young",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -32.704954,
+      "longitude": -57.630866,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-321",
+      "charger_name": "Golf",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Busy",
+      "latitude": -34.927901,
+      "longitude": -56.161484,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-361",
+      "charger_name": "ANCAP Florida",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.096919,
+      "longitude": -56.196372,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1381",
+      "charger_name": "CETEC Norte UTE - Paso de los Toros",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -32.813112,
+      "longitude": -56.503748,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Mobility - Open Mall-GBT-60-0",
+      "charger_name": "Mobility - Open Mall",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.9419998,
+      "longitude": -54.9361389,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-801",
+      "charger_name": "ANCAP Solanas",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.878541,
+      "longitude": -55.053068,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-821",
+      "charger_name": "Punta del Este - Parada 3",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.95026,
+      "longitude": -54.937023,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Mobility - Open Mall-GBT-60-0",
+      "charger_name": "Mobility - Open Mall",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.9419998,
+      "longitude": -54.9361389,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-822",
+      "charger_name": "Punta del Este - Parada 5",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.942108,
+      "longitude": -54.932418,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Mobility - Open Mall-GBT-60-0",
+      "charger_name": "Mobility - Open Mall",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.9419998,
+      "longitude": -54.9361389,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-881",
+      "charger_name": "ANCAP José Ignacio",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.835025,
+      "longitude": -54.644789,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE Electrolinera Leguizamón-CCS 2-300-2",
+      "charger_name": "UTE Electrolinera Leguizamón",
+      "connector_type": "CCS 2",
+      "power": 300,
+      "provider": "UTE",
+      "status": "Charging",
+      "latitude": -34.896317,
+      "longitude": -56.140618,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-882",
+      "charger_name": "Terminal Piriápolis",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.86203,
+      "longitude": -55.274783,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE Electrolinera Leguizamón-CCS 2-300-2",
+      "charger_name": "UTE Electrolinera Leguizamón",
+      "connector_type": "CCS 2",
+      "power": 300,
+      "provider": "UTE",
+      "status": "Charging",
+      "latitude": -34.896317,
+      "longitude": -56.140618,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1201",
+      "charger_name": "Estadio Centenario",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.8917115,
+      "longitude": -56.1543685,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1361",
+      "charger_name": "ANCAP Trinidad - Ruta 3",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Error",
+      "latitude": -33.52803,
+      "longitude": -56.894656,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Mobility - Open Mall-GBT-60-0",
+      "charger_name": "Mobility - Open Mall",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.9419998,
+      "longitude": -54.9361389,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1621",
+      "charger_name": "ANCAP América Tacuarembó",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Busy",
+      "latitude": -31.7262242,
+      "longitude": -55.9718609,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE ANCAP América Tacuarembó-CCS 2-60-0",
+      "charger_name": "UTE ANCAP América Tacuarembó",
+      "connector_type": "CCS 2",
+      "power": 60,
+      "provider": "UTE",
+      "status": "Charging",
+      "latitude": -31.7262242,
+      "longitude": -55.9718609,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1641",
+      "charger_name": "Termas de Daymán",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -31.4558512,
+      "longitude": -57.9096333,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE Electrolinera Leguizamón-CCS 2-300-2",
+      "charger_name": "UTE Electrolinera Leguizamón",
+      "connector_type": "CCS 2",
+      "power": 300,
+      "provider": "UTE",
+      "status": "Charging",
+      "latitude": -34.896317,
+      "longitude": -56.140618,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1883",
+      "charger_name": "Plaza de los Niños",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -30.4047844,
+      "longitude": -56.4629124,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE Plaza de los Niños-CCS 2-60-0",
+      "charger_name": "UTE Plaza de los Niños",
+      "connector_type": "CCS 2",
+      "power": 60,
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -30.4047844,
+      "longitude": -56.4629124,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2042",
+      "charger_name": "Plaza Constitución Trinidad",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Busy",
+      "latitude": -33.517081,
+      "longitude": -56.898402,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE Electrolinera Leguizamón-CCS 2-300-2",
+      "charger_name": "UTE Electrolinera Leguizamón",
+      "connector_type": "CCS 2",
+      "power": 300,
+      "provider": "UTE",
+      "status": "Charging",
+      "latitude": -34.896317,
+      "longitude": -56.140618,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2043",
+      "charger_name": "Plaza Pedro Poveda DC",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Busy",
+      "latitude": -34.870495,
+      "longitude": -56.187443,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2066",
+      "charger_name": "Ecoparque Talice",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -33.508249,
+      "longitude": -56.937011,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2341",
+      "charger_name": "Plaza Los Fundadores",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Busy",
+      "latitude": -34.2848757,
+      "longitude": -57.2338976,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2381",
+      "charger_name": "Colonia Valdense",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Error",
+      "latitude": -34.3371311,
+      "longitude": -57.2530074,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2561",
+      "charger_name": "Plaza De la Familia - Carmelo ",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -33.989815,
+      "longitude": -58.281705,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Mobility - Open Mall-GBT-60-0",
+      "charger_name": "Mobility - Open Mall",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.9419998,
+      "longitude": -54.9361389,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2582",
+      "charger_name": "Plaza Artigas La Floresta",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.759725,
+      "longitude": -55.672995,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2602",
+      "charger_name": "Gremial del Taxi CPATU",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Busy",
+      "latitude": -34.868071,
+      "longitude": -56.186521,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2701",
+      "charger_name": "San José DC 1",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.342544,
+      "longitude": -56.70298,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE Electrolinera Leguizamón-CCS 2-300-2",
+      "charger_name": "UTE Electrolinera Leguizamón",
+      "connector_type": "CCS 2",
+      "power": 300,
+      "provider": "UTE",
+      "status": "Charging",
+      "latitude": -34.896317,
+      "longitude": -56.140618,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2721",
+      "charger_name": "Panda Free Shop",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -32.5823359,
+      "longitude": -53.3785893,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2741",
+      "charger_name": "San Ramón",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.288229,
+      "longitude": -55.958338,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE Electrolinera Leguizamón-CCS 2-300-2",
+      "charger_name": "UTE Electrolinera Leguizamón",
+      "connector_type": "CCS 2",
+      "power": 300,
+      "provider": "UTE",
+      "status": "Charging",
+      "latitude": -34.896317,
+      "longitude": -56.140618,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-962",
+      "charger_name": "Ecilda Paullier",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.3625884,
+      "longitude": -57.0574784,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1241",
+      "charger_name": "ANCAP Francolino Paysandú",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -32.3183645,
+      "longitude": -58.0743682,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE Electrolinera Leguizamón-CCS 2-300-2",
+      "charger_name": "UTE Electrolinera Leguizamón",
+      "connector_type": "CCS 2",
+      "power": 300,
+      "provider": "UTE",
+      "status": "Charging",
+      "latitude": -34.896317,
+      "longitude": -56.140618,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1561",
+      "charger_name": "Vieja Usina UTE - Treinta y Tres",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -33.2346165,
+      "longitude": -54.3985881,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Mobility - Open Mall-GBT-60-0",
+      "charger_name": "Mobility - Open Mall",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.9419998,
+      "longitude": -54.9361389,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1601",
+      "charger_name": "Estadio Martínez Monegal",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.5226273,
+      "longitude": -56.2752567,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE Electrolinera Leguizamón-CCS 2-300-2",
+      "charger_name": "UTE Electrolinera Leguizamón",
+      "connector_type": "CCS 2",
+      "power": 300,
+      "provider": "UTE",
+      "status": "Charging",
+      "latitude": -34.896317,
+      "longitude": -56.140618,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1626",
+      "charger_name": "Macromercado Rivera",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -30.9204939,
+      "longitude": -55.5398168,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1761",
+      "charger_name": "Plaza Paul Harris",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.8763551,
+      "longitude": -56.0377477,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1841",
+      "charger_name": "Terminal del Cerro",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.873082,
+      "longitude": -56.248884,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1861",
+      "charger_name": "Parque de Minas",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.4254385,
+      "longitude": -55.1938313,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1886",
+      "charger_name": "Estadio Parque Artigas",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -32.3224331,
+      "longitude": -58.0716883,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1901",
+      "charger_name": "Hospital BSE",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.86731,
+      "longitude": -56.160038,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1961",
+      "charger_name": "Plaza Artigas - Mercedes",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -33.2565621,
+      "longitude": -58.0277748,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Mobility - Open Mall-GBT-60-0",
+      "charger_name": "Mobility - Open Mall",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.9419998,
+      "longitude": -54.9361389,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2061",
+      "charger_name": "La Barra",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Error",
+      "latitude": -34.9133183,
+      "longitude": -54.8618576,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2064",
+      "charger_name": "Hospital de Pan de Azúcar",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.7787262,
+      "longitude": -55.2240453,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE Electrolinera Leguizamón-CCS 2-300-2",
+      "charger_name": "UTE Electrolinera Leguizamón",
+      "connector_type": "CCS 2",
+      "power": 300,
+      "provider": "UTE",
+      "status": "Charging",
+      "latitude": -34.896317,
+      "longitude": -56.140618,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2065",
+      "charger_name": "Batoví",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Busy",
+      "latitude": -34.890289,
+      "longitude": -56.185279,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE Electrolinera Leguizamón-CCS 2-300-2",
+      "charger_name": "UTE Electrolinera Leguizamón",
+      "connector_type": "CCS 2",
+      "power": 300,
+      "provider": "UTE",
+      "status": "Charging",
+      "latitude": -34.896317,
+      "longitude": -56.140618,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2161",
+      "charger_name": "Hospital de Ojos Saint Bois",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Busy",
+      "latitude": -34.7889098,
+      "longitude": -56.2417871,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2181",
+      "charger_name": "Colonia Shopping",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.4661563,
+      "longitude": -57.835495,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2283",
+      "charger_name": "447 Duty Free Shop",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -31.8678235,
+      "longitude": -54.1667246,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2301",
+      "charger_name": "Shopping Las Piedras",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.7257925,
+      "longitude": -56.2027049,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2361",
+      "charger_name": "Montevideo Shopping",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Busy",
+      "latitude": -34.903968,
+      "longitude": -56.136669,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2421",
+      "charger_name": "Plaza Artigas Florencio Sánchez",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -33.8758797,
+      "longitude": -57.3708861,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE Electrolinera Leguizamón-CCS 2-300-2",
+      "charger_name": "UTE Electrolinera Leguizamón",
+      "connector_type": "CCS 2",
+      "power": 300,
+      "provider": "UTE",
+      "status": "Charging",
+      "latitude": -34.896317,
+      "longitude": -56.140618,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2801",
+      "charger_name": "Av. Fco. Soca y Libertad",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Busy",
+      "latitude": -34.908627,
+      "longitude": -56.153853,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE Av. Fco. Soca y Libertad-CCS 2-60-0",
+      "charger_name": "UTE Av. Fco. Soca y Libertad",
+      "connector_type": "CCS 2",
+      "power": 60,
+      "provider": "UTE",
+      "status": "Charging",
+      "latitude": -34.908627,
+      "longitude": -56.153853,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-861",
+      "charger_name": "Rocha - Oficina de Turismo",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Error",
+      "latitude": -34.488761,
+      "longitude": -54.320398,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Mobility - Open Mall-GBT-60-0",
+      "charger_name": "Mobility - Open Mall",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.9419998,
+      "longitude": -54.9361389,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1221",
+      "charger_name": "Skatepark Carrasco",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.8843476,
+      "longitude": -56.0580876,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1521",
+      "charger_name": "Plaza Constitución Fray Bentos",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -33.116197,
+      "longitude": -58.313329,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE Electrolinera Leguizamón-CCS 2-300-2",
+      "charger_name": "UTE Electrolinera Leguizamón",
+      "connector_type": "CCS 2",
+      "power": 300,
+      "provider": "UTE",
+      "status": "Charging",
+      "latitude": -34.896317,
+      "longitude": -56.140618,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-1801",
+      "charger_name": "La Paloma",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.663984,
+      "longitude": -54.157528,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2002",
+      "charger_name": "Plaza Rivera Minas",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Busy",
+      "latitude": -34.37563,
+      "longitude": -55.242589,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2062",
+      "charger_name": "San Rafael",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.9408281,
+      "longitude": -54.9162997,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2141",
+      "charger_name": "Plaza de Deportes de Pando",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.723076,
+      "longitude": -55.957135,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2221",
+      "charger_name": "UAM",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.8203761,
+      "longitude": -56.2699141,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2481",
+      "charger_name": "Shopping Nuevocentro",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.869657,
+      "longitude": -56.169246,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2501",
+      "charger_name": "CHUY DFA ",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -33.693156,
+      "longitude": -53.448956,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2521",
+      "charger_name": "Museo Zorrilla",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Error",
+      "latitude": -34.9277636,
+      "longitude": -56.1598697,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2522",
+      "charger_name": "Terminal del Cerro 2",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Busy",
+      "latitude": -34.873204,
+      "longitude": -56.249964,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2581",
+      "charger_name": "Duty Free Shop Fray Bentos",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -33.113267,
+      "longitude": -58.24494,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2641",
+      "charger_name": "Pinamar DC",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.7787832,
+      "longitude": -55.8615145,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2642",
+      "charger_name": "El Pinar",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Busy",
+      "latitude": -34.804275,
+      "longitude": -55.90957,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2661",
+      "charger_name": "Novillo Alegre Punta",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.935722,
+      "longitude": -54.937054,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2681",
+      "charger_name": "Municipio Punta del Este",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.9595654,
+      "longitude": -54.9400916,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-2781",
+      "charger_name": "CINEMATECA",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Error",
+      "latitude": -34.908617,
+      "longitude": -56.200841,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-12",
+      "charger_name": "Joanicó",
+      "connector_type": "CCS2",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.87903,
+      "longitude": -56.148899,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-UTE Electrolinera Leguizamón-CCS 2-300-2",
+      "charger_name": "UTE Electrolinera Leguizamón",
+      "connector_type": "CCS 2",
+      "power": 300,
+      "provider": "UTE",
+      "status": "Charging",
+      "latitude": -34.896317,
+      "longitude": -56.140618,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-321",
+      "charger_name": "Golf",
+      "connector_type": "CHAdeMO",
+      "provider": "UTE",
+      "status": "Error",
+      "latitude": -34.927901,
+      "longitude": -56.161484,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Auxicar-GBT-60-0",
+      "charger_name": "Auxicar",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.88750198,
+      "longitude": -56.11521536,
+      "source": "eve"
+    }
+  },
+  {
+    "cargadoresuy": {
+      "connector_id": "cuy-821",
+      "charger_name": "Punta del Este - Parada 3",
+      "connector_type": "CHAdeMO",
+      "provider": "UTE",
+      "status": "Available",
+      "latitude": -34.95026,
+      "longitude": -54.937023,
+      "source": "cargadoresuy"
+    },
+    "eve": {
+      "connector_id": "eve-Mobility - Open Mall-GBT-60-0",
+      "charger_name": "Mobility - Open Mall",
+      "connector_type": "GBT",
+      "power": 60,
+      "provider": "EVE",
+      "status": "Available",
+      "latitude": -34.9419998,
+      "longitude": -54.9361389,
+      "source": "eve"
+    }
+  }
+]

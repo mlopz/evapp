@@ -1,0 +1,112 @@
+[
+  {
+    "connector_id": "cuy-141",
+    "charger_name": "ANCAP San José de Mayo - Ocampo",
+    "connector_type": "CCS2",
+    "provider": "UTE",
+    "status": "Busy",
+    "latitude": -34.33246,
+    "longitude": -56.726218,
+    "source": "cargadoresuy"
+  },
+  {
+    "connector_id": "cuy-2063",
+    "charger_name": "Centro de Atención Turística Atlántida",
+    "connector_type": "CCS2",
+    "provider": "UTE",
+    "status": "Unavaliable",
+    "latitude": -34.7691071,
+    "longitude": -55.7644038,
+    "source": "cargadoresuy"
+  },
+  {
+    "connector_id": "cuy-8",
+    "charger_name": "Estación Península",
+    "connector_type": "GB/T",
+    "provider": "UTE",
+    "status": "Error",
+    "latitude": -34.967524,
+    "longitude": -54.951832,
+    "source": "cargadoresuy"
+  },
+  {
+    "connector_id": "cuy-15",
+    "charger_name": "Electrolinera Leguizamón",
+    "connector_type": "GB/T",
+    "provider": "UTE",
+    "status": "Busy",
+    "latitude": -34.896317,
+    "longitude": -56.140618,
+    "source": "cargadoresuy"
+  },
+  {
+    "connector_id": "cuy-28",
+    "charger_name": "ANCAP San Luis",
+    "connector_type": "GB/T",
+    "provider": "UTE",
+    "status": "Available",
+    "latitude": -34.77033,
+    "longitude": -55.576509,
+    "source": "cargadoresuy"
+  },
+  {
+    "connector_id": "cuy-2741",
+    "charger_name": "San Ramón",
+    "connector_type": "GB/T",
+    "provider": "UTE",
+    "status": "Available",
+    "latitude": -34.288229,
+    "longitude": -55.958338,
+    "source": "cargadoresuy"
+  },
+  {
+    "connector_id": "cuy-2063",
+    "charger_name": "Centro de Atención Turística Atlántida",
+    "connector_type": "GB/T",
+    "provider": "UTE",
+    "status": "Busy",
+    "latitude": -34.7691071,
+    "longitude": -55.7644038,
+    "source": "cargadoresuy"
+  },
+  {
+    "connector_id": "cuy-2181",
+    "charger_name": "Colonia Shopping",
+    "connector_type": "GB/T",
+    "provider": "UTE",
+    "status": "Available",
+    "latitude": -34.4661563,
+    "longitude": -57.835495,
+    "source": "cargadoresuy"
+  },
+  {
+    "connector_id": "cuy-2301",
+    "charger_name": "Shopping Las Piedras",
+    "connector_type": "GB/T",
+    "provider": "UTE",
+    "status": "Available",
+    "latitude": -34.7257925,
+    "longitude": -56.2027049,
+    "source": "cargadoresuy"
+  },
+  {
+    "connector_id": "cuy-2062",
+    "charger_name": "San Rafael",
+    "connector_type": "GB/T",
+    "provider": "UTE",
+    "status": "Available",
+    "latitude": -34.9408281,
+    "longitude": -54.9162997,
+    "source": "cargadoresuy"
+  },
+  {
+    "connector_id": "cuy-2141",
+    "charger_name": "Plaza de Deportes de Pando",
+    "connector_type": "GB/T",
+    "provider": "UTE",
+    "status": "Available",
+    "latitude": -34.723076,
+    "longitude": -55.957135,
+    "source": "cargadoresuy"
+  }
+]
