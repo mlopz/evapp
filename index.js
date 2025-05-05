@@ -236,19 +236,17 @@ async function verificarMonitoreoCargadores(newChargers, expectedChargers = []) 
     const respaldoCharger = respaldoData.find(c => normalizeType(c.name) === normalizeType(chargerName));
     if (!eveCharger || !respaldoCharger) continue;
     // Matching conectores
-    const matches = matchConnectorsByTypeAndPosition(eveCharger.connectors || [], [respaldoCharger]);
-    // Si no hay matches, intentar matching manual por tipo
-    for (const connectorId in chargerState) {
-      const state = chargerState[connectorId];
+    for (const connector_id in chargerState) {
+      const state = chargerState[connector_id];
       const minutosSinCambio = (now - state.lastUpdate) / 60;
       // Buscar el conector correspondiente en respaldo usando tipo y posición
       const eveConnectors = eveCharger.connectors || [];
-      const cargadoresuyConnectors = [respaldoCharger]; // La API de respaldo tiene 1 entry por cargador
+      const cargadoresuyConnectors = [respaldoCharger];
       // Agrupar por tipo
-      const eveTypeGroup = eveConnectors.filter(c => normalizeType(c.type) === normalizeType(state.connectorType));
-      const respaldoTypeGroup = [respaldoCharger].filter(c => normalizeType(c.connectorType) === normalizeType(state.connectorType));
+      const eveTypeGroup = eveConnectors.filter(c => normalizeType(c.type) === normalizeType(state.connector_type));
+      const respaldoTypeGroup = [respaldoCharger].filter(c => normalizeType(c.connectorType) === normalizeType(state.connector_type));
       // Buscar posición de este conector en el grupo
-      const position = eveTypeGroup.findIndex(c => c.connectorId === connectorId);
+      const position = eveTypeGroup.findIndex(c => c.connector_id === connector_id);
       if (position === -1 || respaldoTypeGroup.length <= position) continue;
       const respaldoConector = respaldoTypeGroup[position];
       // Mapear status numérico a string
@@ -264,32 +262,32 @@ async function verificarMonitoreoCargadores(newChargers, expectedChargers = []) 
       if (minutosSinCambio > 120) {
         conectoresInactivos.push({
           chargerName,
-          connectorId,
+          connector_id,
           minutosSinCambio: minutosSinCambio.toFixed(1)
         });
         // Si el último motivo fue respaldo_api y los estados no coinciden, NO corregir hasta que ambos coincidan
         if (state.lastSessionReason === 'respaldo_api' && state.state !== respaldoStatus) {
-          console.warn(`[RESPLADO] Esperando coincidencia de estados para ${chargerName} | ${connectorId}: principal=${state.state}, respaldo=${respaldoStatus}`);
+          console.warn(`[RESPLADO] Esperando coincidencia de estados para ${chargerName} | ${connector_id}: principal=${state.state}, respaldo=${respaldoStatus}`);
           continue;
         }
         // Si los estados no coinciden y no hay bloqueo, corregir
         if (respaldoStatus !== state.state) {
-          console.warn(`[RESPLADO] Estado diferente detectado para ${chargerName} | ${connectorId}: API principal = ${state.state}, Respaldo = ${respaldoStatus}`);
+          console.warn(`[RESPLADO] Estado diferente detectado para ${chargerName} | ${connector_id}: API principal = ${state.state}, Respaldo = ${respaldoStatus}`);
           // Cierre automático
           if (state.state === 'Charging' && respaldoStatus === 'Available') {
             try {
               await closeChargingSessionSafe({
                 charger_name: chargerName,
-                connector_type: state.connectorType,
-                connector_id: connectorId,
+                connector_type: state.connector_type,
+                connector_id,
                 end_reason: 'respaldo_api',
                 end_timestamp: now
               });
-              connectorsState[chargerName][connectorId].lastSessionReason = 'respaldo_api';
-              connectorsState[chargerName][connectorId].lastSessionState = 'Available';
-              console.log(`[RESPLADO] Sesión cerrada automáticamente para ${chargerName} | ${connectorId} por discrepancia con respaldo.`);
+              connectorsState[chargerName][connector_id].lastSessionReason = 'respaldo_api';
+              connectorsState[chargerName][connector_id].lastSessionState = 'Available';
+              console.log(`[RESPLADO] Sesión cerrada automáticamente para ${chargerName} | ${connector_id} por discrepancia con respaldo.`);
             } catch (cerrarErr) {
-              console.error(`[RESPLADO] Error al cerrar sesión automáticamente para ${chargerName} | ${connectorId}:`, cerrarErr);
+              console.error(`[RESPLADO] Error al cerrar sesión automáticamente para ${chargerName} | ${connector_id}:`, cerrarErr);
             }
           }
           // Apertura automática
@@ -297,23 +295,23 @@ async function verificarMonitoreoCargadores(newChargers, expectedChargers = []) 
             try {
               await openChargingSessionSafe({
                 charger_name: chargerName,
-                connector_type: state.connectorType,
-                connector_id: connectorId,
+                connector_type: state.connector_type,
+                connector_id,
                 start_reason: 'respaldo_api',
                 start_timestamp: now
               });
-              connectorsState[chargerName][connectorId].lastSessionReason = 'respaldo_api';
-              connectorsState[chargerName][connectorId].lastSessionState = 'Charging';
-              console.log(`[RESPLADO] Sesión abierta automáticamente para ${chargerName} | ${connectorId} por discrepancia con respaldo.`);
+              connectorsState[chargerName][connector_id].lastSessionReason = 'respaldo_api';
+              connectorsState[chargerName][connector_id].lastSessionState = 'Charging';
+              console.log(`[RESPLADO] Sesión abierta automáticamente para ${chargerName} | ${connector_id} por discrepancia con respaldo.`);
             } catch (abrirErr) {
-              console.error(`[RESPLADO] Error al abrir sesión automáticamente para ${chargerName} | ${connectorId}:`, abrirErr);
+              console.error(`[RESPLADO] Error al abrir sesión automáticamente para ${chargerName} | ${connector_id}:`, abrirErr);
             }
           }
           // Registrar cambio de estado con dato de respaldo
           insertMonitoringRecordSafe({
             charger_name: chargerName,
-            connector_type: state.connectorType,
-            connector_id: connectorId,
+            connector_type: state.connector_type,
+            connector_id,
             power: state.power || null,
             status: respaldoStatus,
             timestamp: now,
@@ -341,7 +339,7 @@ async function verificarMonitoreoCargadores(newChargers, expectedChargers = []) 
   if (faltantes.length > 0) {
     console.warn(`[MONITORING-VERIFICACION] FALTAN cargadores: ${faltantes.join(', ')}`);
   }
-  conectoresInactivos.forEach(c => console.warn(`[MONITORING-VERIFICACION] Conector inactivo hace ${c.minutosSinCambio} minutos: ${c.chargerName} | ${c.connectorId}`));
+  conectoresInactivos.forEach(c => console.warn(`[MONITORING-VERIFICACION] Conector inactivo hace ${c.minutosSinCambio} minutos: ${c.chargerName} | ${c.connector_id}`));
 }
 
 // --- Endpoint para exponer el resultado de verificación ---
