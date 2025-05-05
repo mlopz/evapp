@@ -1275,3 +1275,87 @@ closeAndOpenChargingSessionsOnStartup = async function() {
   await oldStartup.apply(this, arguments);
   await doubleCheckConnectorsOnStartup();
 }
+
+// --- Utilidad para normalizar estados de conectores ---
+function normalizeConnectorStatus(status, statusDetails) {
+  // Si ya es string estándar, devolver tal cual
+  if (typeof status === 'string') {
+    const s = status.trim().toLowerCase();
+    if (s === 'charging') return 'Charging';
+    if (s === 'available') return 'Available';
+    if (s === 'unavailable') return 'Unavailable';
+    if (s === 'sessionended') return 'SessionEnded';
+    if (s === 'error') return 'Error';
+    if (s === 'busy') return 'Charging'; // Normalizamos "Busy" a "Charging"
+    // Si es un string inesperado, intentamos con statusDetails
+  }
+  // Si es número (caso API de respaldo)
+  if (typeof status === 'number') {
+    if (status === 0) return 'Available';
+    if (status === 1) return 'Charging'; // Busy
+    if (status === 2) return 'Unavailable';
+    if (status === 3) return 'Error';
+  }
+  // Si viene statusDetails
+  if (typeof statusDetails === 'string') {
+    const s = statusDetails.trim().toLowerCase();
+    if (s === 'charging' || s === 'busy') return 'Charging';
+    if (s === 'available') return 'Available';
+    if (s === 'unavailable') return 'Unavailable';
+    if (s === 'sessionended') return 'SessionEnded';
+    if (s === 'error') return 'Error';
+  }
+  return 'Unknown';
+}
+
+// --- Aplicar normalización en doubleCheckConnectorsOnStartup ---
+async function doubleCheckConnectorsOnStartup() {
+  // 1. Obtener datos de ambas fuentes
+  let mainChargers = chargersData;
+  let respaldoData = [];
+  try {
+    const res = await fetch('https://cargadoresuy-functions-bfefr5ygxa-uc.a.run.app/stations');
+    if (!res.ok) {
+      const text = await res.text();
+      console.error(`[STARTUP] Error HTTP consultando API de respaldo: ${res.status} ${res.statusText}. Respuesta: ${text}`);
+      return;
+    }
+    let json;
+    try {
+      json = await res.json();
+    } catch (parseErr) {
+      const raw = await res.text();
+      console.error('[STARTUP] Error parseando JSON de respaldo:', parseErr, 'Respuesta recibida:', raw);
+      return;
+    }
+    respaldoData = json.data || json || [];
+  } catch (err) {
+    console.error('[STARTUP] Error consultando API de respaldo:', err);
+    return;
+  }
+
+  // --- Matching y chequeo doble con normalización ---
+  for (const charger of mainChargers) {
+    const respaldoCharger = respaldoData.find(rc => rc.name && rc.name.trim().toLowerCase() === charger.name.trim().toLowerCase());
+    if (!respaldoCharger) continue;
+    for (const connector of (charger.connectors || [])) {
+      const connector_id = connector.connector_id;
+      // Buscar conector correspondiente en respaldo (por tipo y posición)
+      const respaldoConnectors = (Array.isArray(respaldoCharger.connectors) ? respaldoCharger.connectors : [respaldoCharger]);
+      const match = respaldoConnectors.find(rc => {
+        // Match por tipo
+        return (rc.connectorType || rc.type || '').toLowerCase() === (connector.type || '').toLowerCase();
+      });
+      if (!match) continue;
+      // Normalizar ambos estados
+      const mainStatus = normalizeConnectorStatus(connector.status, connector.statusDetails);
+      const respaldoStatus = normalizeConnectorStatus(match.status, match.statusDetails);
+      if (mainStatus !== respaldoStatus) {
+        console.warn(`[STARTUP] Discrepancia al iniciar: ${charger.name} | ${connector_id} | Principal: ${mainStatus} | Respaldo: ${respaldoStatus}`);
+        continue;
+      }
+      // Si coinciden, proceder con lógica de sesión (como antes)
+      // ...
+    }
+  }
+}
