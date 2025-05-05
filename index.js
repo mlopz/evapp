@@ -228,10 +228,65 @@ function verificarMonitoreoCargadores(newChargers, expectedChargers = []) {
           connectorId,
           minutosSinCambio: minutosSinCambio.toFixed(1)
         });
+        // --- Medida de seguridad: consultar API de respaldo ---
+        (async () => {
+          // Obtener tipo de conector desde memoria (puede requerir ajuste según estructura)
+          const connectorType = state.connectorType || (getChargersWithAccumulated().find(c => c.name === chargerName)?.connectors.find(conn => conn.connectorId === connectorId)?.type) || '';
+          const respaldo = await verificarEstadoRespaldo(chargerName, connectorType);
+          if (respaldo) {
+            if (respaldo.status !== state.state) {
+              console.warn(`[RESPLADO] Estado diferente detectado para ${chargerName} | ${connectorId}: API principal = ${state.state}, Respaldo = ${respaldo.status}`);
+              // Si el estado local es "Charging" y respaldo es "Available", cerrar sesión automáticamente
+              if (state.state === 'Charging' && respaldo.status === 'Available') {
+                // Cerrar sesión y registrar evento
+                try {
+                  await closeChargingSessionSafe({
+                    charger_name: chargerName,
+                    connector_type: connectorType,
+                    connector_id: connectorId,
+                    end_reason: 'corregido_por_respaldo',
+                    end_timestamp: now
+                  });
+                  console.log(`[RESPLADO] Sesión cerrada automáticamente para ${chargerName} | ${connectorId} por discrepancia con respaldo.`);
+                } catch (cerrarErr) {
+                  console.error(`[RESPLADO] Error al cerrar sesión automáticamente para ${chargerName} | ${connectorId}:`, cerrarErr);
+                }
+              }
+              // Si el estado local es "Available" y respaldo es "Charging", abrir sesión automáticamente
+              if (state.state === 'Available' && respaldo.status === 'Charging') {
+                try {
+                  await openChargingSessionSafe({
+                    charger_name: chargerName,
+                    connector_type: connectorType,
+                    connector_id: connectorId,
+                    start_reason: 'corregido_por_respaldo',
+                    start_timestamp: now
+                  });
+                  console.log(`[RESPLADO] Sesión abierta automáticamente para ${chargerName} | ${connectorId} por discrepancia con respaldo.`);
+                } catch (abrirErr) {
+                  console.error(`[RESPLADO] Error al abrir sesión automáticamente para ${chargerName} | ${connectorId}:`, abrirErr);
+                }
+              }
+              // Registrar cambio de estado con dato de respaldo
+              insertMonitoringRecordSafe({
+                charger_name: chargerName,
+                connector_type: connectorType,
+                connector_id: connectorId,
+                power: state.power || null,
+                status: respaldo.status,
+                timestamp: now,
+                reason: 'respaldo_api'
+              }).catch(err => console.error('[RESPLADO] Error insertando cambio de estado por respaldo:', err));
+            } else {
+              console.log(`[RESPLADO] Estado coincidente para ${chargerName} | ${connectorId}: ${state.state}`);
+            }
+          } else {
+            console.warn(`[RESPLADO] No se encontró información de respaldo para ${chargerName} | ${connectorId}`);
+          }
+        })();
       }
     }
   }
-
   // Guardar el resultado global
   lastMonitoringVerification = {
     timestamp: now,
@@ -800,7 +855,7 @@ function shouldProcessConnector(connectorId) {
 // --- MODIFICAR insertMonitoringRecordSafe PARA ACTUALIZAR HEARTBEAT SI YA EXISTE SESION ACTIVA ---
 async function insertMonitoringRecordSafe({ charger_name, connector_type, connector_id, power, status, timestamp, reason = 'state_change' }) {
   // FILTRO: ignorar si no es rápido, solo si hay connector_id
-  if (connector_id && !shouldProcessConnector(connector_id)) return;
+  if (connector_id && !shouldProcessConnector(connectorId)) return;
   if (typeof power === 'string') power = parseFloat(power);
   // --- DEFENSIVO: asegurar timestamp en segundos ---
   if (typeof timestamp === 'number') {
@@ -912,3 +967,156 @@ app.use((err, req, res, next) => {
 //   reason: 'backend_restart'
 // });
 // console.log('[AUDITORÍA] Evento backend_restart registrado en base de datos');
+
+// --- Consulta a API de respaldo para verificar estado de cargador inactivo ---
+async function verificarEstadoRespaldo(chargerName, connectorType) {
+  try {
+    const res = await fetch('https://cargadoresuy-functions-bfefr5ygxa-uc.a.run.app/stations');
+    const json = await res.json();
+    if (!json.data) return null;
+    // Normalizar nombre y tipo de conector
+    const match = json.data.find(station => {
+      // Normalización básica: compara por nombre y tipo de conector
+      return (
+        station.name.trim().toLowerCase() === chargerName.trim().toLowerCase() &&
+        (station.connectorType || '').trim().toLowerCase() === (connectorType || '').trim().toLowerCase()
+      );
+    });
+    if (!match) return null;
+    // Mapear status numérico a string (según documentación de la API de respaldo)
+    // Ejemplo: 0 = 'Available', 1 = 'Busy', 2 = 'Unavailable', 3 = 'Error'
+    let statusStr = 'Unknown';
+    switch (match.status) {
+      case 0:
+        statusStr = 'Available'; break;
+      case 1:
+        statusStr = 'Charging'; break; // Interpretamos 'Busy' como 'Charging'
+      case 2:
+        statusStr = 'Unavailable'; break;
+      case 3:
+        statusStr = 'Error'; break;
+      default:
+        statusStr = String(match.statusDetails || 'Unknown');
+    }
+    return {
+      chargerName: match.name,
+      connectorType: match.connectorType,
+      status: statusStr,
+      rawStatus: match.status,
+      statusDetails: match.statusDetails
+    };
+  } catch (err) {
+    console.error('[RESPLADO] Error consultando API de respaldo:', err);
+    return null;
+  }
+}
+
+// --- Cierre seguro de sesión de carga por respaldo ---
+async function closeChargingSessionSafe({ charger_name, connector_type, connector_id, end_reason, end_timestamp }) {
+  // Aquí deberías implementar la lógica para cerrar la sesión en la base de datos
+  // y registrar el evento con el motivo 'corregido_por_respaldo'.
+  // Ejemplo básico:
+  try {
+    // Buscar sesión activa
+    const activeSession = await dbConnector.getActiveSession({ charger_name, connector_id });
+    if (activeSession) {
+      await dbConnector.closeSession({
+        session_id: activeSession.session_id,
+        end_reason,
+        end_timestamp
+      });
+      // Opcional: registrar en tabla de auditoría
+      await dbConnector.insertAuditLog({
+        charger_name,
+        connector_id,
+        action: 'close_session_by_respaldo',
+        timestamp: end_timestamp,
+        details: { end_reason }
+      });
+    } else {
+      console.warn(`[RESPLADO] No se encontró sesión activa para cerrar en ${charger_name} | ${connector_id}`);
+    }
+  } catch (err) {
+    console.error(`[RESPLADO] Error en closeChargingSessionSafe para ${charger_name} | ${connector_id}:`, err);
+    throw err;
+  }
+}
+
+// --- Apertura segura de sesión de carga por respaldo ---
+async function openChargingSessionSafe({ charger_name, connector_type, connector_id, start_reason, start_timestamp }) {
+  // Aquí deberías implementar la lógica para abrir la sesión en la base de datos
+  // y registrar el evento con el motivo 'corregido_por_respaldo'.
+  // Ejemplo básico:
+  try {
+    // Verificar que no haya ya una sesión activa
+    const activeSession = await dbConnector.getActiveSession({ charger_name, connector_id });
+    if (!activeSession) {
+      await dbConnector.openSession({
+        charger_name,
+        connector_type,
+        connector_id,
+        start_reason,
+        start_timestamp
+      });
+      // Opcional: registrar en tabla de auditoría
+      await dbConnector.insertAuditLog({
+        charger_name,
+        connector_id,
+        action: 'open_session_by_respaldo',
+        timestamp: start_timestamp,
+        details: { start_reason }
+      });
+    } else {
+      console.warn(`[RESPLADO] Ya existe sesión activa para ${charger_name} | ${connector_id}`);
+    }
+  } catch (err) {
+    console.error(`[RESPLADO] Error en openChargingSessionSafe para ${charger_name} | ${connector_id}:`, err);
+    throw err;
+  }
+}
+
+// --- Utilidad para matching de conectores por tipo y posición ---
+function normalizeType(type) {
+  return (type || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function matchConnectorsByTypeAndPosition(eveConnectors, cargadoresuyConnectors) {
+  // Agrupar por tipo y normalizar
+  const groupByType = (arr) =>
+    arr.reduce((acc, conn) => {
+      const t = normalizeType(conn.type || conn.connectorType);
+      acc[t] = acc[t] || [];
+      acc[t].push(conn);
+      return acc;
+    }, {});
+
+  const eveGrouped = groupByType(eveConnectors);
+  const cargadoresuyGrouped = groupByType(cargadoresuyConnectors);
+
+  // Matching por tipo y posición
+  const matches = [];
+  for (const type in eveGrouped) {
+    const eveList = eveGrouped[type];
+    const cargadoresuyList = cargadoresuyGrouped[type] || [];
+    if (eveList.length !== cargadoresuyList.length) {
+      console.warn(`[MATCHING] No coincide la cantidad de conectores tipo ${type}: eve=${eveList.length}, cargadores.uy=${cargadoresuyList.length}`);
+      continue; // O loguear para revisión manual
+    }
+    for (let i = 0; i < eveList.length; i++) {
+      matches.push({
+        eveConnector: eveList[i],
+        cargadoresuyConnector: cargadoresuyList[i],
+        type,
+        position: i
+      });
+    }
+  }
+  return matches;
+}
+
+// --- Ejemplo de uso en la verificación de estados (dentro de la función de verificación principal) ---
+//
+// const matches = matchConnectorsByTypeAndPosition(eveConnectors, cargadoresuyConnectors);
+// matches.forEach(({ eveConnector, cargadoresuyConnector, type, position }) => {
+//   // Aquí puedes comparar estados, ids, etc., y aplicar la lógica de corrección automática
+// });
