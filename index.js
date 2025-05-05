@@ -1157,3 +1157,98 @@ function matchConnectorsByTypeAndPosition(eveConnectors, cargadoresuyConnectors)
 // matches.forEach(({ eveConnector, cargadoresuyConnector, type, position }) => {
 //   // Aquí puedes comparar estados, ids, etc., y aplicar la lógica de corrección automática
 // });
+
+// --- Chequeo doble de coherencia al iniciar el backend ---
+async function doubleCheckConnectorsOnStartup() {
+  // 1. Obtener datos de ambas fuentes
+  let mainChargers = chargersData; // Asumimos que ya está poblado por la API principal
+  let respaldoData = [];
+  try {
+    const res = await fetch('https://cargadoresuy-functions-bfefr5ygxa-uc.a.run.app/stations');
+    const json = await res.json();
+    respaldoData = json.data || [];
+  } catch (err) {
+    console.error('[STARTUP] Error consultando API de respaldo:', err);
+    return;
+  }
+
+  // 2. Para cada cargador, hacer matching de conectores por tipo y posición
+  for (const charger of mainChargers) {
+    const chargerName = charger.name;
+    const respaldoCharger = respaldoData.find(c => normalizeType(c.name) === normalizeType(chargerName));
+    if (!respaldoCharger) continue;
+    const mainConnectors = charger.connectors || [];
+    const respaldoConnectors = [respaldoCharger]; // La API de respaldo tiene 1 entry por cargador
+    // Agrupar y hacer matching por tipo y posición
+    for (const connector of mainConnectors) {
+      const connector_id = connector.connector_id;
+      const type = normalizeType(connector.type);
+      // Buscar posición en el grupo de ese tipo
+      const mainTypeGroup = mainConnectors.filter(c => normalizeType(c.type) === type);
+      const respaldoTypeGroup = [respaldoCharger].filter(c => normalizeType(c.connectorType) === type);
+      const position = mainTypeGroup.findIndex(c => c.connector_id === connector_id);
+      if (position === -1 || respaldoTypeGroup.length <= position) continue;
+      const respaldoConector = respaldoTypeGroup[position];
+      // Mapear status numérico a string
+      let respaldoStatus = 'Unknown';
+      switch (respaldoConector.status) {
+        case 0: respaldoStatus = 'Available'; break;
+        case 1: respaldoStatus = 'Charging'; break;
+        case 2: respaldoStatus = 'Unavailable'; break;
+        case 3: respaldoStatus = 'Error'; break;
+        default: respaldoStatus = String(respaldoConector.statusDetails || 'Unknown');
+      }
+      // Solo actualizar si ambos coinciden
+      if (connector.status === respaldoStatus) {
+        // Actualizar estado interno y abrir/cerrar sesión si corresponde
+        if (!connectorsState[chargerName]) connectorsState[chargerName] = {};
+        connectorsState[chargerName][connector_id] = connectorsState[chargerName][connector_id] || {
+          state: connector.status,
+          lastState: null,
+          lastUpdate: getNow(),
+          accumulatedMinutes: 0,
+          sessionStart: null,
+          connector_type: connector.type,
+        };
+        // Si está Charging y no hay sesión, abrir
+        if (connector.status === 'Charging' && !connectorsState[chargerName][connector_id].sessionStart) {
+          await openChargingSessionSafe({
+            charger_name: chargerName,
+            connector_type: connector.type,
+            connector_id,
+            start_reason: 'startup_double_check',
+            start_timestamp: getNow()
+          });
+          connectorsState[chargerName][connector_id].sessionStart = getNow();
+          connectorsState[chargerName][connector_id].lastSessionReason = 'startup_double_check';
+          connectorsState[chargerName][connector_id].lastSessionState = 'Charging';
+          console.log(`[STARTUP] Sesión abierta para ${chargerName} | ${connector_id} (coherente en ambas fuentes)`);
+        }
+        // Si está Available y hay sesión, cerrar
+        if (connector.status === 'Available' && connectorsState[chargerName][connector_id].sessionStart) {
+          await closeChargingSessionSafe({
+            charger_name: chargerName,
+            connector_type: connector.type,
+            connector_id,
+            end_reason: 'startup_double_check',
+            end_timestamp: getNow()
+          });
+          connectorsState[chargerName][connector_id].sessionStart = null;
+          connectorsState[chargerName][connector_id].lastSessionReason = 'startup_double_check';
+          connectorsState[chargerName][connector_id].lastSessionState = 'Available';
+          console.log(`[STARTUP] Sesión cerrada para ${chargerName} | ${connector_id} (coherente en ambas fuentes)`);
+        }
+      } else {
+        // Loguear discrepancia
+        console.warn(`[STARTUP] Discrepancia al iniciar: ${chargerName} | ${connector_id} | Principal: ${connector.status} | Respaldo: ${respaldoStatus}`);
+      }
+    }
+  }
+}
+
+// Llamar a este chequeo doble al final de closeAndOpenChargingSessionsOnStartup
+const oldStartup = closeAndOpenChargingSessionsOnStartup;
+closeAndOpenChargingSessionsOnStartup = async function() {
+  await oldStartup.apply(this, arguments);
+  await doubleCheckConnectorsOnStartup();
+}
