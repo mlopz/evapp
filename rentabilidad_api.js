@@ -53,8 +53,8 @@ function getChargerInfo(name) {
 }
 
 // Agrupamiento por pares de conectores
-function getPairKey(chargerName, connectorId) {
-  const match = connectorId.match(/(\d+)$/);
+function getPairKey(chargerName, connector_id) {
+  const match = connector_id.match(/(\d+)$/);
   const idx = match ? parseInt(match[1]) : 0;
   const pair = Math.floor(idx / 2);
   return `${chargerName} - Par ${pair + 1}`;
