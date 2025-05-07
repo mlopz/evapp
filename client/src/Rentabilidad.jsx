@@ -7,7 +7,38 @@ const ESCENARIOS = [
   { value: "optimista", label: "Optimista" },
 ];
 
+// Parámetros por escenario
+const ESCENARIO_PARAMS = {
+  conservador: {
+    descripcion: 'Escenario conservador: baja utilización, precios bajos, costos altos.',
+    supuestos: [
+      'Baja ocupación promedio',
+      'Precio de venta bajo',
+      'Costo energético alto',
+      'Menor recaudación por riesgos o mantenimiento'
+    ]
+  },
+  intermedio: {
+    descripcion: 'Escenario intermedio: utilización y precios promedio, costos estándar.',
+    supuestos: [
+      'Ocupación y precios promedio',
+      'Costos estándar',
+      'Sin eventos extraordinarios'
+    ]
+  },
+  optimista: {
+    descripcion: 'Escenario optimista: alta utilización, precios altos, costos bajos.',
+    supuestos: [
+      'Alta ocupación',
+      'Precio de venta alto',
+      'Costo energético bajo',
+      'Máxima recaudación esperada'
+    ]
+  }
+};
+
 export default function Rentabilidad() {
+  console.log("DEBUG render Rentabilidad");
   const [from, setFrom] = useState(dayjs().startOf("month").format("YYYY-MM-DD"));
   const [to, setTo] = useState(dayjs().endOf("month").format("YYYY-MM-DD"));
   const [tarifas, setTarifas] = useState([]);
@@ -19,7 +50,7 @@ export default function Rentabilidad() {
 
   // Cargar tarifas.json al montar
   React.useEffect(() => {
-    fetch("/tarifas.json")
+    fetch('https://evapp-production.up.railway.app/tarifas.json')
       .then(r => r.json())
       .then(data => setTarifas(data))
       .catch(() => setTarifas([]));
@@ -31,6 +62,7 @@ export default function Rentabilidad() {
     setError("");
     setResultados([]);
     try {
+      console.log("DEBUG antes del fetch a /api/rentabilidad");
       // 1. Fetch sesiones
       const sesionesRes = await fetch(`/api/connector-sessions?from=${from}&to=${to}`);
       const sesiones = await sesionesRes.json();
@@ -57,36 +89,80 @@ export default function Rentabilidad() {
       }));
       console.log("DEBUG sesiones mapeadas:", sesionesMapeadas);
       // 4. POST a rentabilidad
+      const tarifaSeleccionadaObj = tarifas.find(t => t.id === tarifaSeleccionada);
       const body = {
         from,
         to,
-        tarifa: tarifaSeleccionada,
         escenario,
         sesiones: sesionesMapeadas,
-        costosCarga
+        costosCarga,
+        tarifa: tarifaSeleccionadaObj // Enviar objeto completo
       };
-      const rentRes = await fetch("/api/rentabilidad", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      });
-      const text = await rentRes.text();
-      console.log("DEBUG respuesta backend:", text);
-      if (!rentRes.ok) throw new Error(text);
+      console.log("DEBUG body rentabilidad:", body);
+      let rentRes, text;
+      try {
+        console.log("DEBUG antes del fetch a /api/rentabilidad");
+        rentRes = await fetch('https://evapp-production.up.railway.app/api/rentabilidad', {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        text = await rentRes.text();
+        console.log("DEBUG respuesta backend:", text);
+      } catch (fetchErr) {
+        console.error("DEBUG error de red o CORS en fetch /api/rentabilidad:", fetchErr);
+        setError("Error de red o CORS: " + fetchErr.message);
+        setLoading(false);
+        return;
+      }
+      if (!rentRes.ok) {
+        console.log("DEBUG respuesta backend no OK:", text);
+        throw new Error(text);
+      }
       let data = [];
+      // Loguear status y headers de la respuesta
+      console.log("DEBUG rentRes.status:", rentRes.status);
+      console.log("DEBUG rentRes.headers:", rentRes.headers);
+      console.log("DEBUG string recibido del backend antes de parsear:", text, "typeof:", typeof text);
+      if (!text) {
+        setError("Respuesta vacía del backend");
+        setLoading(false);
+        return;
+      }
       try {
         data = JSON.parse(text);
-      } catch {
+      } catch (parseErr) {
+        console.error("DEBUG error parseando JSON:", parseErr);
         setError("Respuesta del backend no es JSON válido: " + text);
         setLoading(false);
         return;
       }
       setResultados(data);
     } catch (err) {
+      console.error("DEBUG error rentabilidad:", err);
       setError(err.message || "Error desconocido");
     } finally {
       setLoading(false);
     }
+  };
+
+  // --- Tabla de criterios técnicos por escenario ---
+  const getCriteriosTabla = (escenario) => {
+    // Lógica reflejando getSessionPower del backend
+    return [
+      {
+        empresa: 'UTE', potencia: 300, ocupacion: '1',
+        potenciaUsada: escenario === 'conservador' ? 45 : (escenario === 'intermedio' ? 60 : 60)
+      },
+      {
+        empresa: 'UTE', potencia: 300, ocupacion: '2 o más',
+        potenciaUsada: escenario === 'conservador' ? 27 : (escenario === 'intermedio' ? 30 : 60)
+      },
+      {
+        empresa: 'UTE', potencia: 60, ocupacion: 'cualquier', potenciaUsada: 60 },
+      { empresa: 'Mobility', potencia: 60, ocupacion: 'cualquier', potenciaUsada: 60 },
+      { empresa: 'eOne', potencia: 60, ocupacion: 'cualquier', potenciaUsada: 60 }
+    ];
   };
 
   return (
@@ -132,6 +208,61 @@ export default function Rentabilidad() {
           </button>
         </div>
       </div>
+      {/* Descripción del escenario seleccionado */}
+      <div className="mb-4 p-3 bg-orange-50 border-l-4 border-orange-400 rounded">
+        <div className="font-semibold text-orange-700 mb-1">Escenario seleccionado: {ESCENARIOS.find(e => e.value === escenario)?.label}</div>
+        <div className="text-sm text-gray-700 mb-1">{ESCENARIO_PARAMS[escenario]?.descripcion}</div>
+        <ul className="list-disc ml-6 text-xs text-gray-600">
+          {ESCENARIO_PARAMS[escenario]?.supuestos.map((s,i) => <li key={i}>{s}</li>)}
+        </ul>
+      </div>
+      {/* Tabla de criterios técnicos según escenario */}
+      <div className="mb-4 p-3 bg-orange-50 border-l-4 border-orange-400 rounded">
+        <div className="font-semibold text-orange-700 mb-1">Criterios técnicos del escenario seleccionado</div>
+        <div className="text-xs text-gray-700 mb-2">La potencia usada para el cálculo depende de la empresa, la potencia nominal del cargador y la ocupación simultánea.</div>
+        <table className="min-w-[300px] text-xs border border-orange-200 bg-white rounded">
+          <thead>
+            <tr className="bg-orange-100">
+              <th className="px-2 py-1 text-left">Empresa</th>
+              <th className="px-2 py-1 text-left">Potencia cargador (kW)</th>
+              <th className="px-2 py-1 text-left">Ocupación simultánea</th>
+              <th className="px-2 py-1 text-left">Potencia usada (kW)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {getCriteriosTabla(escenario).map((row, i) => (
+              <tr key={i}>
+                <td className="px-2 py-1">{row.empresa}</td>
+                <td className="px-2 py-1">{row.potencia}</td>
+                <td className="px-2 py-1">{row.ocupacion}</td>
+                <td className="px-2 py-1 font-semibold text-orange-800">{row.potenciaUsada}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {/* Tabla de costos de la tarifa seleccionada */}
+      {tarifaSeleccionada && tarifas.length > 0 && (
+        (() => {
+          const t = tarifas.find(t => t.id === tarifaSeleccionada);
+          if (!t) return null;
+          return (
+            <div className="mb-4 p-3 bg-orange-50 border-l-4 border-orange-400 rounded">
+              <div className="font-semibold text-orange-700 mb-1">Costos de la tarifa seleccionada: {t.nombre}</div>
+              <table className="min-w-[200px] text-xs border border-orange-200 bg-white rounded">
+                <tbody>
+                  {Object.entries(t).filter(([k]) => k !== 'id' && k !== 'nombre' && k !== 'descripcion').map(([k,v]) => (
+                    <tr key={k}>
+                      <td className="px-2 py-1 font-semibold text-orange-800 text-right capitalize">{k.replace(/_/g,' ')}</td>
+                      <td className="px-2 py-1 text-gray-700">{typeof v === 'number' ? v.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(v)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()
+      )}
       {error && <div className="text-red-600 mb-4">{error}</div>}
       {resultados && resultados.length > 0 && (
         <div className="overflow-x-auto">
