@@ -1,4 +1,80 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from 'react';
+
+export default function Rentabilidad() {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/rentabilidad/estadisticas')
+      .then((res) => {
+        if (!res.ok) throw new Error('Error al obtener estadísticas');
+        return res.json();
+      })
+      .then((data) => {
+        setStats(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <div className="p-4">Cargando...</div>;
+  if (error) return <div className="p-4 text-red-600">{error}</div>;
+  if (!stats) return <div className="p-4">Sin datos.</div>;
+
+  return (
+    <div className="p-4 max-w-2xl mx-auto">
+      <h2 className="text-2xl font-bold mb-4">Estadísticas de Rentabilidad</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded shadow p-4">
+          <h3 className="font-semibold">Energía total entregada</h3>
+          <p>{stats.energiaTotal} kWh</p>
+        </div>
+        <div className="bg-white rounded shadow p-4">
+          <h3 className="font-semibold">Total de sesiones</h3>
+          <p>{stats.totalSesiones}</p>
+        </div>
+        <div className="bg-white rounded shadow p-4">
+          <h3 className="font-semibold">Recaudación estimada</h3>
+          <p>${stats.recaudacionEstim}</p>
+        </div>
+        <div className="bg-white rounded shadow p-4">
+          <h3 className="font-semibold">Costos estimados</h3>
+          <p>${stats.costoEstim}</p>
+        </div>
+        <div className="bg-white rounded shadow p-4 md:col-span-2">
+          <h3 className="font-semibold">Rentabilidad</h3>
+          <p>${stats.rentabilidad}</p>
+        </div>
+      </div>
+      <h4 className="mt-8 mb-2 font-semibold">Rentabilidad por cargador</h4>
+      <table className="min-w-full bg-white rounded shadow">
+        <thead>
+          <tr>
+            <th className="px-2 py-1 text-left">Cargador</th>
+            <th className="px-2 py-1 text-left">Energía (kWh)</th>
+            <th className="px-2 py-1 text-left">Sesiones</th>
+            <th className="px-2 py-1 text-left">Rentabilidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          {stats.porCargador.map((c) => (
+            <tr key={c.charger_name}>
+              <td className="px-2 py-1">{c.charger_name}</td>
+              <td className="px-2 py-1">{c.energia}</td>
+              <td className="px-2 py-1">{c.sesiones}</td>
+              <td className="px-2 py-1">${c.rentabilidad}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+, { useState } from "react";
 import dayjs from "dayjs";
 
 const ESCENARIOS = [
@@ -23,32 +99,26 @@ const ESCENARIO_PARAMS = {
     supuestos: [
       'Ocupación y precios promedio',
       'Costos estándar',
-      'Sin eventos extraordinarios'
-    ]
-  },
-  optimista: {
-    descripcion: 'Escenario optimista: alta utilización, precios altos, costos bajos.',
-    supuestos: [
-      'Alta ocupación',
-      'Precio de venta alto',
-      'Costo energético bajo',
-      'Máxima recaudación esperada'
-    ]
-  }
-};
 
 export default function Rentabilidad() {
-  console.log("DEBUG render Rentabilidad");
-  const [from, setFrom] = useState(dayjs().startOf("month").format("YYYY-MM-DD"));
-  const [to, setTo] = useState(dayjs().endOf("month").format("YYYY-MM-DD"));
-  const [tarifas, setTarifas] = useState([]);
-  const [tarifaSeleccionada, setTarifaSeleccionada] = useState("");
-  const [escenario, setEscenario] = useState(ESCENARIOS[0].value);
-  const [resultados, setResultados] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Cargar tarifas.json al montar
+  useEffect(() => {
+    fetch('/api/rentabilidad/estadisticas')
+      .then((res) => {
+        if (!res.ok) throw new Error('Error al obtener estadísticas');
+        return res.json();
+      })
+      .then((data) => {
+        setStats(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
   React.useEffect(() => {
     fetch('https://evapp-production.up.railway.app/tarifas.json')
       .then(r => r.json())

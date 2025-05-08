@@ -411,6 +411,9 @@ function closeAndOpenChargingSessionsOnStartup() {
 setInterval(pollChargers, POLL_INTERVAL);
 pollChargers();
 
+const rentabilidadRoutes = require('./routes/rentabilidad');
+app.use('/api/rentabilidad', rentabilidadRoutes);
+
 app.use(require('./rentabilidad_api'));
 
 app.get('/api/chargers', (req, res) => {
