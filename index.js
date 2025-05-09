@@ -470,38 +470,26 @@ app.get('/api/charger-monitoring/export', async (req, res) => {
     res.send(csvHeader + csvRows);
   } catch (err) {
     console.error('[charger-monitoring/export] Error:', err);
-    res.status(500).json({ error: 'Error exportando eventos' });
   }
 });
 
-// --- Endpoint para limpiar la base de datos (tabla charger_monitoring) ---
-app.post('/api/clear-db', async (req, res) => {
-  try {
-    await pool.query('DELETE FROM charger_monitoring');
-    res.json({ success: true, message: 'Base de datos limpiada correctamente.' });
-  } catch (err) {
-    console.error('Error al limpiar la base de datos:', err);
-    res.status(500).json({ success: false, message: 'Error al limpiar la base de datos.', error: err.message });
-  }
-});
+const createTableSQL = `
+  CREATE TABLE IF NOT EXISTS connector_sessions (
+    id SERIAL PRIMARY KEY,
+    charger_name VARCHAR(100) NOT NULL,
+    connector_id VARCHAR(100) NOT NULL,
+    connector_type VARCHAR(50),
+    power INTEGER,
+    session_start TIMESTAMP NOT NULL,
+    session_end TIMESTAMP,
+    duration_minutes INTEGER,
+    last_heartbeat TIMESTAMP,
+    energy_kwh REAL,
+    created_at TIMESTAMP DEFAULT NOW()
+  );
+`;
 
-// --- Endpoint para crear la tabla connector_sessions ---
-app.post('/api/create-connector-sessions-table', async (req, res) => {
-  const createTableSQL = `
-    CREATE TABLE IF NOT EXISTS connector_sessions (
-      id SERIAL PRIMARY KEY,
-      charger_name VARCHAR(100) NOT NULL,
-      connector_id VARCHAR(100) NOT NULL,
-      connector_type VARCHAR(50),
-      power INTEGER,
-      session_start TIMESTAMP NOT NULL,
-      session_end TIMESTAMP,
-      duration_minutes INTEGER,
-      last_heartbeat TIMESTAMP,
-      energy_kwh REAL,
-      created_at TIMESTAMP DEFAULT NOW()
-    );
-  `;
+app.post('/api/create-table', async (req, res) => {
   try {
     await pool.query(createTableSQL);
     res.json({ ok: true, message: 'Tabla connector_sessions creada (o ya existía).' });
