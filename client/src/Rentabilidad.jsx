@@ -111,7 +111,7 @@ const [tarifa, setTarifa] = useState(null);
 
   // Filtro de cargadores para el autocomplete
   const filteredChargers = chargers.filter(c =>
-    (c && c.name && c.name.toLowerCase().includes(search.toLowerCase()))
+    c && typeof c.name === 'string' && c.name.trim() !== '' && c.name.toLowerCase().includes(search.toLowerCase())
   );
 
   // LOG para depuración: mostrar el contenido de stats antes de renderizar la tabla
