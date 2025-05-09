@@ -969,9 +969,11 @@ app.get('/api/sessions/filtradas', async (req, res) => {
   const params = [];
 
   if (chargers) {
-    const chargerList = chargers.split(',').map(c => c.trim());
-    query += ` AND charger_name = ANY($${params.length + 1})`;
-    params.push(chargerList);
+    const chargerList = chargers.split(',').map(c => c.trim().toLowerCase());
+    // Creamos condiciones flexibles para cada cargador
+    const chargerConds = chargerList.map((_, i) => `TRIM(LOWER(charger_name)) = $${params.length + i + 1}`);
+    query += ` AND (${chargerConds.join(' OR ')})`;
+    params.push(...chargerList);
   }
   if (from) {
     query += ` AND session_start >= $${params.length + 1}`;
