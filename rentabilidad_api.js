@@ -126,6 +126,9 @@ function calcularGastoElectrico(tarifa, kWh) {
 // Body: { from, to, escenario, tarifaSeleccionada, sesiones }
 router.post('/api/rentabilidad', async (req, res) => {
   console.log('DEBUG rentabilidad: request recibido');
+  // LOG: mostrar la primera sesión recibida
+  const { from, to, escenario, tarifa, sesiones } = req.body;
+  console.log('DEBUG rentabilidad: ejemplo de sesión recibida:', sesiones && sesiones.length > 0 ? sesiones[0] : 'Ninguna');
   try {
     const bodyStr = JSON.stringify(req.body);
     console.log('Tamaño del body:', bodyStr.length, 'bytes');
@@ -143,7 +146,7 @@ router.post('/api/rentabilidad', async (req, res) => {
     const sesionesConOcupacion = calcularOcupacionSimultaneaPorSesion(sesionesFiltradas);
     // Procesar sesiones
     const resultados = {};
-    sesionesConOcupacion.forEach((session) => {
+    sesionesConOcupacion.forEach((session, idx) => {
       const { empresa, potencia } = getChargerInfo(session.charger_name);
       // Usar el campo ocupadosSimultaneo para lógica de potencia
       const power = getSessionPower({ empresa, potencia }, session.ocupadosSimultaneo, escenario);
@@ -152,6 +155,19 @@ router.post('/api/rentabilidad', async (req, res) => {
       const recaudacion_bruta = calcularRecaudacionBruta({ empresa }, kWh, session.session_start, session.session_end, costos);
       const gasto_electrico = calcularGastoElectrico(tarifa, kWh);
       const recaudacion_neta = recaudacion_bruta - gasto_electrico;
+      // LOG: mostrar los cálculos de la primera sesión procesada
+      if (idx === 0) {
+        console.log('DEBUG cálculo sesión:', {
+          charger_name: session.charger_name,
+          session_start: session.session_start,
+          session_end: session.session_end,
+          minutos,
+          kWh,
+          recaudacion_bruta,
+          gasto_electrico,
+          recaudacion_neta
+        });
+      }
       const key = getPairKey(session.charger_name, session.connector_id);
       if (!resultados[key]) {
         resultados[key] = {
