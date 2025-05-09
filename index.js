@@ -973,6 +973,37 @@ module.exports = {
   initBackendProtection
 };
 
+// --- Nuevo endpoint eficiente para filtrar sesiones históricas ---
+// GET /api/sessions/filtradas?chargers=Auxicar,Novillo&from=2025-05-01&to=2025-05-09
+app.get('/api/sessions/filtradas', async (req, res) => {
+  const { chargers, from, to } = req.query;
+  let query = 'SELECT * FROM connector_sessions WHERE 1=1';
+  const params = [];
+
+  if (chargers) {
+    const chargerList = chargers.split(',').map(c => c.trim());
+    query += ` AND charger_name = ANY($${params.length + 1})`;
+    params.push(chargerList);
+  }
+  if (from) {
+    query += ` AND session_start >= $${params.length + 1}`;
+    params.push(from);
+  }
+  if (to) {
+    query += ` AND session_start <= $${params.length + 1}`;
+    params.push(to);
+  }
+  query += ' ORDER BY session_start';
+
+  try {
+    const { rows } = await pool.query(query, params);
+    res.json({ sessions: rows });
+  } catch (err) {
+    console.error('Error al filtrar sesiones:', err);
+    res.status(500).json({ error: 'Error al filtrar sesiones' });
+  }
+});
+
 // --- ENDPOINT PARA OBTENER SESIONES FILTRADAS POR FECHA ---
 app.get('/api/connector-sessions', async (req, res) => {
   const { from, to } = req.query;

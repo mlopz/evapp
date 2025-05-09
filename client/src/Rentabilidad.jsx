@@ -1,363 +1,237 @@
 import React, { useEffect, useState } from 'react';
 
-export default function Rentabilidad() {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
+export default function Rentabilidad() {
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [chargers, setChargers] = useState([]);
+const [sesiones, setSesiones] = useState([]);
+const [escenario, setEscenario] = useState('auspicioso');
+const [tarifas, setTarifas] = useState([]);
+const [tarifa, setTarifa] = useState(null);
+  const [selectedChargers, setSelectedChargers] = useState([]); // ids seleccionados
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [search, setSearch] = useState('');
+
+  // Cargar la lista de cargadores al montar
   useEffect(() => {
-    fetch('/api/rentabilidad/estadisticas')
-      .then((res) => {
-        if (!res.ok) throw new Error('Error al obtener estadísticas');
-        return res.json();
-      })
-      .then((data) => {
-        setStats(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
+    const apiUrl = process.env.REACT_APP_API_URL || '';
+    fetch(`${apiUrl}/api/chargers`)
+      .then(res => res.json())
+      .then(data => setChargers(data.chargers || []));
+    // Traer todas las sesiones reales para el prototipo
+    fetch(`${apiUrl}/api/sessions`)
+      .then(res => res.json())
+      .then(data => {
+        const sesionesArray = data.sessions || [];
+        console.log('Primeras 3 sesiones recibidas:', sesionesArray.slice(0,3));
+        setSesiones(sesionesArray);
+      });
+    // Cargar tarifas desde public/tarifas.json
+    fetch('/tarifas.json')
+      .then(res => res.json())
+      .then(data => {
+        setTarifas(data);
+        if (data.length > 0) setTarifa(data[0]);
       });
   }, []);
 
-  if (loading) return <div className="p-4">Cargando...</div>;
-  if (error) return <div className="p-4 text-red-600">{error}</div>;
-  if (!stats) return <div className="p-4">Sin datos.</div>;
-
-  return (
-    <div className="p-4 max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">Estadísticas de Rentabilidad</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded shadow p-4">
-          <h3 className="font-semibold">Energía total entregada</h3>
-          <p>{stats.energiaTotal} kWh</p>
-        </div>
-        <div className="bg-white rounded shadow p-4">
-          <h3 className="font-semibold">Total de sesiones</h3>
-          <p>{stats.totalSesiones}</p>
-        </div>
-        <div className="bg-white rounded shadow p-4">
-          <h3 className="font-semibold">Recaudación estimada</h3>
-          <p>${stats.recaudacionEstim}</p>
-        </div>
-        <div className="bg-white rounded shadow p-4">
-          <h3 className="font-semibold">Costos estimados</h3>
-          <p>${stats.costoEstim}</p>
-        </div>
-        <div className="bg-white rounded shadow p-4 md:col-span-2">
-          <h3 className="font-semibold">Rentabilidad</h3>
-          <p>${stats.rentabilidad}</p>
-        </div>
-      </div>
-      <h4 className="mt-8 mb-2 font-semibold">Rentabilidad por cargador</h4>
-      <table className="min-w-full bg-white rounded shadow">
-        <thead>
-          <tr>
-            <th className="px-2 py-1 text-left">Cargador</th>
-            <th className="px-2 py-1 text-left">Energía (kWh)</th>
-            <th className="px-2 py-1 text-left">Sesiones</th>
-            <th className="px-2 py-1 text-left">Rentabilidad</th>
-          </tr>
-        </thead>
-        <tbody>
-          {stats.porCargador.map((c) => (
-            <tr key={c.charger_name}>
-              <td className="px-2 py-1">{c.charger_name}</td>
-              <td className="px-2 py-1">{c.energia}</td>
-              <td className="px-2 py-1">{c.sesiones}</td>
-              <td className="px-2 py-1">${c.rentabilidad}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-, { useState } from "react";
-import dayjs from "dayjs";
-
-const ESCENARIOS = [
-  { value: "conservador", label: "Conservador" },
-  { value: "intermedio", label: "Intermedio" },
-  { value: "optimista", label: "Optimista" },
-];
-
-// Parámetros por escenario
-const ESCENARIO_PARAMS = {
-  conservador: {
-    descripcion: 'Escenario conservador: baja utilización, precios bajos, costos altos.',
-    supuestos: [
-      'Baja ocupación promedio',
-      'Precio de venta bajo',
-      'Costo energético alto',
-      'Menor recaudación por riesgos o mantenimiento'
-    ]
-  },
-  intermedio: {
-    descripcion: 'Escenario intermedio: utilización y precios promedio, costos estándar.',
-    supuestos: [
-      'Ocupación y precios promedio',
-      'Costos estándar',
-
-export default function Rentabilidad() {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetch('/api/rentabilidad/estadisticas')
-      .then((res) => {
-        if (!res.ok) throw new Error('Error al obtener estadísticas');
-        return res.json();
-      })
-      .then((data) => {
-        setStats(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  React.useEffect(() => {
-    fetch('https://evapp-production.up.railway.app/tarifas.json')
-      .then(r => r.json())
-      .then(data => setTarifas(data))
-      .catch(() => setTarifas([]));
-  }, []);
-
-  // Handler principal
-  const calcularRentabilidad = async () => {
+  // Handler de consulta
+  const handleConsultar = () => {
     setLoading(true);
-    setError("");
-    setResultados([]);
-    try {
-      console.log("DEBUG antes del fetch a /api/rentabilidad");
-      // 1. Fetch sesiones
-      const sesionesRes = await fetch(`/api/connector-sessions?from=${from}&to=${to}`);
-      const sesiones = await sesionesRes.json();
-      console.log("DEBUG sesiones recibidas:", sesiones);
-      if (!Array.isArray(sesiones) || sesiones.length === 0) {
-        setError("No hay sesiones en el rango seleccionado");
-        setLoading(false);
-        return;
-      }
-      // 2. Fetch costos carga
-      const costosRes = await fetch("/costos_carga.json");
-      const costosCarga = await costosRes.json();
-      console.log("DEBUG costos_carga:", costosCarga);
-      // 3. Mapeo de sesiones
-      const sesionesMapeadas = sesiones.map(s => ({
-        chargerName: s.charger_name,
-        connectorId: s.connector_id,
-        connectorType: s.connector_type,
-        start: s.session_start,
-        end: s.session_end,
-        durationMinutes: s.duration_minutes,
-        empresa: s.charger_name && s.charger_name.startsWith("UTE") ? "UTE" : (s.charger_name && s.charger_name.startsWith("eOne") ? "eOne" : "Mobility"),
-        potencia: s.power || 60
-      }));
-      console.log("DEBUG sesiones mapeadas:", sesionesMapeadas);
-      // 4. POST a rentabilidad
-      const tarifaSeleccionadaObj = tarifas.find(t => t.id === tarifaSeleccionada);
-      const body = {
-        from,
-        to,
-        escenario,
-        sesiones: sesionesMapeadas,
-        costosCarga,
-        tarifa: tarifaSeleccionadaObj // Enviar objeto completo
-      };
-      console.log("DEBUG body rentabilidad:", body);
-      let rentRes, text;
-      try {
-        console.log("DEBUG antes del fetch a /api/rentabilidad");
-        rentRes = await fetch('https://evapp-production.up.railway.app/api/rentabilidad', {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body)
-        });
-        text = await rentRes.text();
-        console.log("DEBUG respuesta backend:", text);
-      } catch (fetchErr) {
-        console.error("DEBUG error de red o CORS en fetch /api/rentabilidad:", fetchErr);
-        setError("Error de red o CORS: " + fetchErr.message);
-        setLoading(false);
-        return;
-      }
-      if (!rentRes.ok) {
-        console.log("DEBUG respuesta backend no OK:", text);
-        throw new Error(text);
-      }
-      let data = [];
-      // Loguear status y headers de la respuesta
-      console.log("DEBUG rentRes.status:", rentRes.status);
-      console.log("DEBUG rentRes.headers:", rentRes.headers);
-      console.log("DEBUG string recibido del backend antes de parsear:", text, "typeof:", typeof text);
-      if (!text) {
-        setError("Respuesta vacía del backend");
-        setLoading(false);
-        return;
-      }
-      try {
-        data = JSON.parse(text);
-      } catch (parseErr) {
-        console.error("DEBUG error parseando JSON:", parseErr);
-        setError("Respuesta del backend no es JSON válido: " + text);
-        setLoading(false);
-        return;
-      }
-      setResultados(data);
-    } catch (err) {
-      console.error("DEBUG error rentabilidad:", err);
-      setError(err.message || "Error desconocido");
-    } finally {
-      setLoading(false);
-    }
+    setError(null);
+    setStats(null);
+    console.log('Cargadores seleccionados:', selectedChargers);
+    // Nuevo flujo: pedir sesiones filtradas al backend y calcular rentabilidad localmente
+    const apiUrl = process.env.REACT_APP_API_URL || '';
+    const chargerParams = selectedChargers.join(',');
+    const url = `${apiUrl}/api/sessions/filtradas?chargers=${encodeURIComponent(chargerParams)}&from=${from}&to=${to}`;
+    fetch(url)
+      .then(res => {
+        if (!res.ok) throw new Error('Error al obtener sesiones filtradas');
+        return res.json();
+      })
+      .then(data => {
+        console.log('Sesiones filtradas recibidas:', data.sessions);
+        // Aquí va el cálculo local de rentabilidad
+        const statsCalculadas = calcularRentabilidadLocal(data.sessions, escenario, tarifa);
+        setStats(statsCalculadas);
+      })
+      .catch(err => {
+        console.error('Error en consulta de sesiones filtradas:', err);
+        setError(err.message);
+      })
+      .finally(() => setLoading(false));
   };
 
-  // --- Tabla de criterios técnicos por escenario ---
-  const getCriteriosTabla = (escenario) => {
-    // Lógica reflejando getSessionPower del backend
-    return [
-      {
-        empresa: 'UTE', potencia: 300, ocupacion: '1',
-        potenciaUsada: escenario === 'conservador' ? 45 : (escenario === 'intermedio' ? 60 : 60)
-      },
-      {
-        empresa: 'UTE', potencia: 300, ocupacion: '2 o más',
-        potenciaUsada: escenario === 'conservador' ? 27 : (escenario === 'intermedio' ? 30 : 60)
-      },
-      {
-        empresa: 'UTE', potencia: 60, ocupacion: 'cualquier', potenciaUsada: 60 },
-      { empresa: 'Mobility', potencia: 60, ocupacion: 'cualquier', potenciaUsada: 60 },
-      { empresa: 'eOne', potencia: 60, ocupacion: 'cualquier', potenciaUsada: 60 }
-    ];
-  };
+  // --- Función de cálculo local de rentabilidad ---
+  function calcularRentabilidadLocal(sesiones, escenario, tarifa) {
+    // Aquí debes implementar el algoritmo de rentabilidad usando las sesiones filtradas, el escenario y la tarifa seleccionada.
+    // Por ahora, solo agrupa por cargador y suma minutos como ejemplo:
+    const resultados = {};
+    sesiones.forEach(s => {
+      const key = s.charger_name;
+      if (!resultados[key]) {
+        resultados[key] = {
+          nombre: key,
+          empresa: s.empresa || '',
+          potencia: s.power || 0,
+          minutos: 0,
+          kWh: 0,
+          recaudacion_bruta: 0,
+          gasto_electrico: 0,
+          recaudacion_neta: 0
+        };
+      }
+      // Ejemplo: sumar minutos y energía
+      const minutos = s.duration_minutes || (s.session_end && s.session_start ? Math.round((new Date(s.session_end) - new Date(s.session_start)) / 60000) : 0);
+      resultados[key].minutos += minutos;
+      // Ejemplo: energía estimada
+      if (s.power && minutos) {
+        resultados[key].kWh += (s.power * minutos) / 60;
+      }
+      // Aquí puedes agregar el cálculo de recaudación y costos según la tarifa y escenario
+    });
+    // Devuelve array para la tabla
+    return Object.values(resultados);
+  }
 
+
+  // Sumar minutos totales de la lista de sesiones por cargador
+  const minutosPorCargador = {};
+  if (stats && stats.sesiones) {
+    stats.sesiones.forEach(s => {
+      const key = s.charger_name;
+      if (!minutosPorCargador[key]) minutosPorCargador[key] = 0;
+      minutosPorCargador[key] += s.duration_minutes || 0;
+    });
+  }
+
+  // Filtro de cargadores para el autocomplete
+  const filteredChargers = chargers.filter(c =>
+    (c && c.name && c.name.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  // LOG para depuración: mostrar el contenido de stats antes de renderizar la tabla
+  console.log('Contenido de stats para la tabla:', stats);
+  if (Array.isArray(stats) && stats.length > 0) {
+    console.log('Campos del primer objeto de stats:', Object.keys(stats[0]), stats[0]);
+  }
   return (
-    <div className="max-w-4xl mx-auto bg-white shadow rounded p-6 mt-8">
-      <h2 className="text-2xl font-bold mb-4 text-orange-700">Rentabilidad</h2>
-      <div className="flex flex-wrap gap-4 mb-4">
-        <div>
-          <label className="block text-sm font-semibold mb-1">Desde</label>
-          <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="border rounded px-2 py-1" />
+    <div className="p-4 max-w-4xl mx-auto">
+      <h2 className="text-2xl font-bold mb-4">Estadísticas de Rentabilidad</h2>
+      {/* Selector de fechas arriba, en fila propia */}
+      <div className="flex flex-col md:flex-row gap-4 mb-4">
+        <div className="flex-1">
+          <label className="block mb-1 font-semibold">Desde</label>
+          <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="border rounded px-2 py-1 w-full" />
         </div>
-        <div>
-          <label className="block text-sm font-semibold mb-1">Hasta</label>
-          <input type="date" value={to} onChange={e => setTo(e.target.value)} className="border rounded px-2 py-1" />
-        </div>
-        <div className="mb-4">
-          <label className="block mb-2 font-semibold">Selecciona una tarifa:</label>
-          <select
-            value={tarifaSeleccionada}
-            onChange={e => setTarifaSeleccionada(e.target.value)}
-            className="border rounded px-2 py-1"
-          >
-            <option value="">-- Selecciona una tarifa --</option>
-            {tarifas.map(tarifa => (
-              <option key={tarifa.id} value={tarifa.id}>
-                {tarifa.nombre} - {tarifa.descripcion}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-semibold mb-1">Escenario</label>
-          <select value={escenario} onChange={e => setEscenario(e.target.value)} className="border rounded px-2 py-1">
-            {ESCENARIOS.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
-          </select>
-        </div>
-        <div className="flex items-end">
-          <button
-            className="bg-orange-600 hover:bg-orange-700 text-white font-bold px-4 py-2 rounded"
-            onClick={calcularRentabilidad}
-            disabled={loading || !from || !to || !tarifaSeleccionada}
-          >
-            {loading ? "Calculando..." : "Calcular rentabilidad"}
-          </button>
+        <div className="flex-1">
+          <label className="block mb-1 font-semibold">Hasta</label>
+          <input type="date" value={to} onChange={e => setTo(e.target.value)} className="border rounded px-2 py-1 w-full" />
         </div>
       </div>
-      {/* Descripción del escenario seleccionado */}
-      <div className="mb-4 p-3 bg-orange-50 border-l-4 border-orange-400 rounded">
-        <div className="font-semibold text-orange-700 mb-1">Escenario seleccionado: {ESCENARIOS.find(e => e.value === escenario)?.label}</div>
-        <div className="text-sm text-gray-700 mb-1">{ESCENARIO_PARAMS[escenario]?.descripcion}</div>
-        <ul className="list-disc ml-6 text-xs text-gray-600">
-          {ESCENARIO_PARAMS[escenario]?.supuestos.map((s,i) => <li key={i}>{s}</li>)}
-        </ul>
+      {/* Selectores de escenario, tarifa y botón en otra fila */}
+      <div className="flex gap-2 mb-2 items-center">
+        {/* Selector de escenario */}
+        <select
+          value={escenario}
+          onChange={e => setEscenario(e.target.value)}
+          className="border rounded px-2 py-1"
+        >
+          <option value="auspicioso">Auspicioso</option>
+          <option value="intermedio">Intermedio</option>
+          <option value="conservador">Conservador</option>
+        </select>
+        {/* Selector de tarifa */}
+        <select
+          value={tarifa ? tarifa.id : ''}
+          onChange={e => setTarifa(tarifas.find(t => t.id === e.target.value))}
+          className="border rounded px-2 py-1"
+        >
+          {tarifas.map(t => (
+            <option key={t.id} value={t.id}>{t.nombre} - {t.descripcion}</option>
+          ))}
+        </select>
+        <button
+          onClick={handleConsultar}
+          className="bg-orange-600 text-white px-4 py-1 rounded hover:bg-orange-700"
+          disabled={loading}
+        >
+          {loading ? 'Consultando...' : 'Consultar'}
+        </button>
       </div>
-      {/* Tabla de criterios técnicos según escenario */}
-      <div className="mb-4 p-3 bg-orange-50 border-l-4 border-orange-400 rounded">
-        <div className="font-semibold text-orange-700 mb-1">Criterios técnicos del escenario seleccionado</div>
-        <div className="text-xs text-gray-700 mb-2">La potencia usada para el cálculo depende de la empresa, la potencia nominal del cargador y la ocupación simultánea.</div>
-        <table className="min-w-[300px] text-xs border border-orange-200 bg-white rounded">
-          <thead>
-            <tr className="bg-orange-100">
-              <th className="px-2 py-1 text-left">Empresa</th>
-              <th className="px-2 py-1 text-left">Potencia cargador (kW)</th>
-              <th className="px-2 py-1 text-left">Ocupación simultánea</th>
-              <th className="px-2 py-1 text-left">Potencia usada (kW)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {getCriteriosTabla(escenario).map((row, i) => (
-              <tr key={i}>
-                <td className="px-2 py-1">{row.empresa}</td>
-                <td className="px-2 py-1">{row.potencia}</td>
-                <td className="px-2 py-1">{row.ocupacion}</td>
-                <td className="px-2 py-1 font-semibold text-orange-800">{row.potenciaUsada}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Autocomplete limpio */}
+      <div className="mb-4">
+        <label className="block mb-1 font-semibold">Selecciona uno o más cargadores</label>
+        <input
+          type="text"
+          placeholder="Buscar por nombre..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="border rounded px-2 py-1 mb-2 w-full"
+        />
+        <div className="max-h-40 overflow-y-auto border rounded bg-white">
+          {filteredChargers.map((c) => {
+            if (!c.name) return null;
+            const nameStr = c.name;
+            return (
+              <label key={nameStr} className="block px-2 py-1 hover:bg-orange-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedChargers.includes(nameStr)}
+                  onChange={e => {
+                    if (e.target.checked) {
+                      setSelectedChargers(prev => [...prev, nameStr]);
+                    } else {
+                      setSelectedChargers(prev => prev.filter(n => n !== nameStr));
+                    }
+                  }}
+                  className="mr-2"
+                />
+                <span>{c.name}</span>
+              </label>
+            );
+          })}
+        </div>
+        {selectedChargers.length === 0 && <div className="text-red-500 text-xs mt-1">Debes seleccionar al menos un cargador</div>}
       </div>
-      {/* Tabla de costos de la tarifa seleccionada */}
-      {tarifaSeleccionada && tarifas.length > 0 && (
-        (() => {
-          const t = tarifas.find(t => t.id === tarifaSeleccionada);
-          if (!t) return null;
-          return (
-            <div className="mb-4 p-3 bg-orange-50 border-l-4 border-orange-400 rounded">
-              <div className="font-semibold text-orange-700 mb-1">Costos de la tarifa seleccionada: {t.nombre}</div>
-              <table className="min-w-[200px] text-xs border border-orange-200 bg-white rounded">
-                <tbody>
-                  {Object.entries(t).filter(([k]) => k !== 'id' && k !== 'nombre' && k !== 'descripcion').map(([k,v]) => (
-                    <tr key={k}>
-                      <td className="px-2 py-1 font-semibold text-orange-800 text-right capitalize">{k.replace(/_/g,' ')}</td>
-                      <td className="px-2 py-1 text-gray-700">{typeof v === 'number' ? v.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(v)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          );
-        })()
-      )}
+      <button
+        className="bg-orange-600 hover:bg-orange-700 text-white font-bold px-4 py-2 rounded mb-4"
+        onClick={handleConsultar}
+        disabled={loading || !from || !to || selectedChargers.length === 0}
+      >
+        {loading ? 'Consultando...' : 'Consultar'}
+      </button>
       {error && <div className="text-red-600 mb-4">{error}</div>}
-      {resultados && resultados.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="min-w-full border border-gray-300 mt-4">
-            <thead className="bg-orange-100">
-              <tr>
-                <th className="px-2 py-1">Cargador</th>
-                <th className="px-2 py-1">Minutos</th>
-                <th className="px-2 py-1">kWh</th>
-                <th className="px-2 py-1">Recaudación bruta</th>
-                <th className="px-2 py-1">Gasto eléctrico</th>
-                <th className="px-2 py-1">Rentabilidad neta</th>
-                <th className="px-2 py-1">Escenario</th>
+      {stats && Array.isArray(stats) && stats.length > 0 && (
+        <div className="overflow-x-auto mt-4">
+          <table className="min-w-full border text-sm">
+            <thead>
+              <tr className="bg-orange-200">
+                <th className="border px-2 py-1">Cargador</th>
+                <th className="border px-2 py-1">Empresa</th>
+                <th className="border px-2 py-1">Potencia (kW)</th>
+                <th className="border px-2 py-1">Minutos</th>
+                <th className="border px-2 py-1">Energía (kWh)</th>
+                <th className="border px-2 py-1">Recaudación Bruta</th>
+                <th className="border px-2 py-1">Gasto Eléctrico</th>
+                <th className="border px-2 py-1">Rentabilidad Neta</th>
               </tr>
             </thead>
             <tbody>
-              {resultados.map((r, i) => (
-                <tr key={i} className="border-b">
-                  <td className="px-2 py-1">{r.chargerName || r.charger_name}</td>
-                  <td className="px-2 py-1">{Math.round(r.minutos || r.durationMinutes)}</td>
-                  <td className="px-2 py-1">{(r.kWh || r.energy_kwh || 0).toFixed(2)}</td>
-                  <td className="px-2 py-1">{(r.recaudacion_bruta || 0).toFixed(2)}</td>
-                  <td className="px-2 py-1">{(r.gasto_electrico || 0).toFixed(2)}</td>
-                  <td className="px-2 py-1 font-semibold text-orange-700">{(r.recaudacion_neta || 0).toFixed(2)}</td>
-                  <td className="px-2 py-1 text-xs text-orange-600 bg-orange-50">{escenario}</td>
+              {stats.map((row, i) => (
+                <tr key={i} className="even:bg-orange-50">
+                  <td className="border px-2 py-1">{row.nombre || '-'}</td>
+                  <td className="border px-2 py-1">{row.empresa || '-'}</td>
+                  <td className="border px-2 py-1">{row.potencia != null ? row.potencia : '-'}</td>
+                  <td className="border px-2 py-1">{row.minutos != null ? row.minutos : '-'}</td>
+                  <td className="border px-2 py-1">{row.kWh != null ? row.kWh.toFixed(2) : '-'}</td>
+                  <td className="border px-2 py-1">{row.recaudacion_bruta != null ? `$${row.recaudacion_bruta.toFixed(2)}` : '-'}</td>
+                  <td className="border px-2 py-1">{row.gasto_electrico != null ? `$${row.gasto_electrico.toFixed(2)}` : '-'}</td>
+                  <td className="border px-2 py-1">{row.recaudacion_neta != null ? `$${row.recaudacion_neta.toFixed(2)}` : '-'}</td>
                 </tr>
               ))}
             </tbody>
